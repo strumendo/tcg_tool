@@ -72,6 +72,9 @@ htmlcov/
 .pytest_cache/
 .tox/
 
+# SQLite databases
+*.db
+
 # Alembic
 alembic/versions/*.py
 !alembic/versions/.gitkeep
