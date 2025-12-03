@@ -1,0 +1,52 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 249, 250, 251;
+  --background-end-rgb: 255, 255, 255;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: linear-gradient(
+      to bottom,
+      transparent,
+      rgb(var(--background-end-rgb))
+    )
+    rgb(var(--background-start-rgb));
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+/* Card type colors */
+.type-grass { @apply bg-grass text-white; }
+.type-fire { @apply bg-fire text-white; }
+.type-water { @apply bg-water text-white; }
+.type-lightning { @apply bg-lightning text-black; }
+.type-psychic { @apply bg-psychic text-white; }
+.type-fighting { @apply bg-fighting text-white; }
+.type-darkness { @apply bg-darkness text-white; }
+.type-metal { @apply bg-metal text-black; }
+.type-dragon { @apply bg-dragon text-white; }
+.type-colorless { @apply bg-colorless text-black; }
+.type-fairy { @apply bg-fairy text-black; }
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-gray-100 rounded;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 rounded hover:bg-gray-400;
+}
