@@ -1,5 +1,5 @@
 """Card and CardSet schemas"""
-from typing import Optional, List
+from typing import Optional, List, Any
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 
@@ -44,8 +44,8 @@ class CardBase(BaseModel):
     weakness: Optional[str] = None
     resistance: Optional[str] = None
     retreat_cost: Optional[int] = None
-    abilities: Optional[dict] = None
-    attacks: Optional[dict] = None
+    abilities: Optional[Any] = None
+    attacks: Optional[Any] = None
     rules: Optional[str] = None
     image_small: Optional[str] = None
     image_large: Optional[str] = None

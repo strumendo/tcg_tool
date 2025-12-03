@@ -1,4 +1,5 @@
 """Application configuration using Pydantic Settings"""
+import os
 from functools import lru_cache
 from typing import Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -18,8 +19,11 @@ class Settings(BaseSettings):
     app_version: str = "0.1.0"
     debug: bool = True
 
-    # Database
-    database_url: str = "postgresql+asyncpg://tcg_user:tcg_password@db:5432/tcg_platform"
+    # Database - defaults to SQLite for easy testing
+    database_url: str = os.environ.get(
+        "DATABASE_URL",
+        "sqlite+aiosqlite:///./tcg_platform.db"
+    )
 
     # Redis
     redis_url: str = "redis://redis:6379"
