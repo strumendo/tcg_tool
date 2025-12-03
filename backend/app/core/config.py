@@ -28,7 +28,11 @@ class Settings(BaseSettings):
     # Redis
     redis_url: str = "redis://redis:6379"
 
-    # MinIO
+    # Storage - Local fallback or MinIO
+    use_local_storage: bool = True  # Default to local for easy testing
+    local_storage_path: str = "./data/storage"
+
+    # MinIO (used when use_local_storage=False)
     minio_endpoint: str = "minio:9000"
     minio_access_key: str = "minioadmin"
     minio_secret_key: str = "minioadmin123"

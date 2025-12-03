@@ -1,5 +1,7 @@
 """Video endpoints"""
+import json
 from typing import Optional
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -7,9 +9,11 @@ from sqlalchemy import select, func
 
 from app.db import get_db
 from app.models.video import Video, VideoStatus
+from app.models.match import Match, MatchResult
 from app.schemas.video import (
     VideoRead, VideoUpdate, VideoListRead, VideoAnalysisRequest
 )
+from app.schemas.match import MatchRead
 from app.core.config import settings
 
 router = APIRouter()
@@ -181,3 +185,99 @@ async def get_video_thumbnail(video_id: int, db: AsyncSession = Depends(get_db))
     thumbnail_data = await video_service.get_thumbnail(video)
 
     return StreamingResponse(thumbnail_data, media_type="image/jpeg")
+
+
+@router.get("/{video_id}/stream")
+async def stream_video(video_id: int, db: AsyncSession = Depends(get_db)):
+    """Stream video file"""
+    from app.services.video_service import VideoService
+
+    query = select(Video).where(Video.id == video_id)
+    result = await db.execute(query)
+    video = result.scalar_one_or_none()
+
+    if not video:
+        raise HTTPException(status_code=404, detail="Video not found")
+
+    if video.status != VideoStatus.READY:
+        raise HTTPException(status_code=400, detail="Video is not ready for streaming")
+
+    video_service = VideoService(db)
+    video_stream = await video_service.get_video_stream(video)
+
+    # Determine content type based on format
+    content_type_map = {
+        'mp4': 'video/mp4',
+        'mov': 'video/quicktime',
+        'avi': 'video/x-msvideo',
+        'mkv': 'video/x-matroska',
+        'webm': 'video/webm',
+    }
+    content_type = content_type_map.get(video.format or 'mp4', 'video/mp4')
+
+    return StreamingResponse(
+        video_stream,
+        media_type=content_type,
+        headers={
+            "Accept-Ranges": "bytes",
+            "Content-Disposition": f"inline; filename={video.filename}",
+        }
+    )
+
+
+@router.post("/{video_id}/create-match", response_model=MatchRead)
+async def create_match_from_video(
+    video_id: int,
+    db: AsyncSession = Depends(get_db)
+):
+    """Create a match record from video analysis results"""
+    query = select(Video).where(Video.id == video_id)
+    result = await db.execute(query)
+    video = result.scalar_one_or_none()
+
+    if not video:
+        raise HTTPException(status_code=404, detail="Video not found")
+
+    if not video.analysis_result:
+        raise HTTPException(status_code=400, detail="Video has not been analyzed yet")
+
+    try:
+        analysis = json.loads(video.analysis_result)
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid analysis data")
+
+    # Extract match data from analysis
+    result_str = analysis.get('result', '').lower()
+    match_result = None
+    if result_str == 'win':
+        match_result = MatchResult.WIN
+    elif result_str == 'loss':
+        match_result = MatchResult.LOSS
+    elif result_str == 'draw':
+        match_result = MatchResult.DRAW
+
+    # Get deck archetypes
+    decks = analysis.get('decks_identified', {})
+    opponent_deck = decks.get('opponent') or analysis.get('opponent_deck')
+
+    # Create match
+    match = Match(
+        deck_id=video.deck_id,
+        opponent_deck_archetype=opponent_deck,
+        result=match_result,
+        player_prizes_taken=0,  # Could be extracted from detailed analysis
+        opponent_prizes_taken=0,
+        match_date=video.created_at,
+        import_source="video_analysis",
+        notes=analysis.get('summary', analysis.get('match_overview', ''))
+    )
+
+    db.add(match)
+    await db.flush()
+
+    # Link video to match
+    video.match_id = match.id
+    await db.flush()
+    await db.refresh(match)
+
+    return MatchRead.model_validate(match)

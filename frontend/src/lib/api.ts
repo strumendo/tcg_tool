@@ -140,10 +140,42 @@ export const uploadVideo = (file: File, title: string, description?: string, dec
   });
 };
 
+// Video upload with progress tracking
+export const uploadVideoWithProgress = (
+  file: File,
+  title: string,
+  onProgress: (progress: number) => void,
+  description?: string,
+  deckId?: number
+) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('title', title);
+  if (description) formData.append('description', description);
+  if (deckId) formData.append('deck_id', deckId.toString());
+
+  return api.post('/videos', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    onUploadProgress: (progressEvent) => {
+      if (progressEvent.total) {
+        const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+        onProgress(progress);
+      }
+    },
+  });
+};
+
 export const analyzeVideo = (id: number, analysisType?: string) =>
   api.post(`/videos/${id}/analyze`, null, { params: { analysis_type: analysisType } });
 
 export const deleteVideo = (id: number) => api.delete(`/videos/${id}`);
+
+export const getVideoThumbnailUrl = (id: number) => `${API_BASE_URL}/api/v1/videos/${id}/thumbnail`;
+
+export const getVideoStreamUrl = (id: number) => `${API_BASE_URL}/api/v1/videos/${id}/stream`;
+
+export const createMatchFromVideo = (videoId: number) =>
+  api.post(`/videos/${videoId}/create-match`);
 
 // YouTube Channels
 export const getYouTubeChannels = (params?: { page?: number; category?: string; favorites_only?: boolean }) =>
