@@ -35,7 +35,7 @@ class MetaImportService:
         snapshot = MetaSnapshot(
             name=snapshot_name,
             description=data.get("description"),
-            snapshot_date=self._parse_date(data.get("date")) or datetime.now(),
+            snapshot_date=self._parse_date(data.get("snapshot_date") or data.get("date")) or datetime.now(),
             source="file",
             tournament_name=data.get("tournament_name") or data.get("tournament"),
             total_players=data.get("total_players") or data.get("players")
