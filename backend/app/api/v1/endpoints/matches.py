@@ -131,6 +131,49 @@ async def import_match_from_text(
     return MatchRead.model_validate(match)
 
 
+@router.get("/stats")
+async def get_overall_stats(
+    deck_id: Optional[int] = None,
+    db: AsyncSession = Depends(get_db)
+):
+    """Get overall match statistics"""
+    query = select(Match)
+    if deck_id:
+        query = query.where(Match.deck_id == deck_id)
+
+    result = await db.execute(query)
+    matches = result.scalars().all()
+
+    total = len(matches)
+    wins = len([m for m in matches if m.result and m.result.value == "win"])
+    losses = len([m for m in matches if m.result and m.result.value == "loss"])
+    draws = len([m for m in matches if m.result and m.result.value == "draw"])
+
+    # Calculate archetype breakdown
+    archetype_stats = {}
+    for match in matches:
+        arch = match.opponent_deck_archetype or "Unknown"
+        if arch not in archetype_stats:
+            archetype_stats[arch] = {"wins": 0, "losses": 0, "draws": 0, "total": 0}
+        archetype_stats[arch]["total"] += 1
+        if match.result:
+            if match.result.value == "win":
+                archetype_stats[arch]["wins"] += 1
+            elif match.result.value == "loss":
+                archetype_stats[arch]["losses"] += 1
+            elif match.result.value == "draw":
+                archetype_stats[arch]["draws"] += 1
+
+    return {
+        "total_matches": total,
+        "wins": wins,
+        "losses": losses,
+        "draws": draws,
+        "win_rate": round((wins / total * 100) if total > 0 else 0, 1),
+        "archetype_breakdown": archetype_stats
+    }
+
+
 @router.get("/{match_id}/stats")
 async def get_match_stats(match_id: int, db: AsyncSession = Depends(get_db)):
     """Get detailed statistics for a match"""

@@ -123,6 +123,12 @@ export const importMatchFromScreenshot = (file: File, deckId?: number) => {
   });
 };
 
+export const importMatchFromText = (textData: string, deckId?: number) =>
+  api.post('/matches/import/text', { text_data: textData, deck_id: deckId });
+
+export const getMatchStats = (deckId?: number) =>
+  api.get('/matches/stats', { params: { deck_id: deckId } });
+
 // Videos
 export const getVideos = (params?: { page?: number; status?: string; deck_id?: number }) =>
   api.get('/videos', { params });
