@@ -42,7 +42,7 @@ class Settings(BaseSettings):
 
     # API Keys
     anthropic_api_key: Optional[str] = None
-    limitless_api_key: Optional[str] = None
+    pokemon_tcg_api_key: str = "3c9a2ed2-0c55-4550-99e3-a65d96814e07"
 
     # Security
     secret_key: str = "your-secret-key-change-in-production"

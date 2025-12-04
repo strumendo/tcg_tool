@@ -167,3 +167,49 @@ async def create_set(card_set: CardSetCreate, db: AsyncSession = Depends(get_db)
     await db.flush()
     await db.refresh(db_set)
     return CardSetRead.model_validate(db_set)
+
+
+# Sync endpoints (Pokemon TCG API)
+@router.post("/sync/sets")
+async def sync_sets(db: AsyncSession = Depends(get_db)):
+    """Sync all card sets from Pokemon TCG API"""
+    from app.services.card_sync import CardSyncService
+
+    sync_service = CardSyncService(db)
+    result = await sync_service.sync_all_sets()
+    return result
+
+
+@router.post("/sync/set/{set_code}")
+async def sync_set_cards(set_code: str, db: AsyncSession = Depends(get_db)):
+    """Sync all cards from a specific set"""
+    from app.services.card_sync import CardSyncService
+
+    sync_service = CardSyncService(db)
+    result = await sync_service.sync_set_cards(set_code)
+    return result
+
+
+@router.post("/sync/standard")
+async def sync_standard_cards(db: AsyncSession = Depends(get_db)):
+    """Sync all standard legal cards from Pokemon TCG API"""
+    from app.services.card_sync import CardSyncService
+
+    sync_service = CardSyncService(db)
+    result = await sync_service.sync_standard_legal_cards()
+    return result
+
+
+@router.get("/api/search")
+async def search_api_cards(
+    q: str = Query(..., min_length=2, description="Search query"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=50),
+    db: AsyncSession = Depends(get_db)
+):
+    """Search cards directly from Pokemon TCG API (doesn't save to DB)"""
+    from app.services.card_sync import CardSyncService
+
+    sync_service = CardSyncService(db)
+    cards = await sync_service.search_cards(q, page, page_size)
+    return {"cards": cards, "query": q, "page": page}

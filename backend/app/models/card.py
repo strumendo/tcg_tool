@@ -77,7 +77,8 @@ class Card(Base, TimestampMixin):
     id: Mapped[int] = mapped_column(primary_key=True)
 
     # External IDs
-    limitless_id: Mapped[Optional[str]] = mapped_column(String(50), unique=True, index=True)
+    ptcg_id: Mapped[Optional[str]] = mapped_column(String(50), unique=True, index=True)  # Pokemon TCG API ID
+    limitless_id: Mapped[Optional[str]] = mapped_column(String(50), index=True)  # Legacy
     ptcgo_code: Mapped[Optional[str]] = mapped_column(String(50))
 
     # Basic info
