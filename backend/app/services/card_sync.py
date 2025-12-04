@@ -1,20 +1,17 @@
-"""Card Sync Service - Sync cards from Pokemon TCG API"""
+"""Card Sync Service - Sync cards from Pokemon TCG API using httpx"""
 from typing import Optional, List
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 import structlog
-
-from pokemontcgsdk import Card as PTCGCard
-from pokemontcgsdk import Set as PTCGSet
-from pokemontcgsdk import RestClient
+import httpx
 
 from app.models.card import Card, CardSet, CardType, CardSubtype, EnergyType
 from app.core.config import settings
 
 logger = structlog.get_logger()
 
-# Configure the SDK with API key
-RestClient.configure(settings.pokemon_tcg_api_key)
+# Pokemon TCG API v2 base URL
+POKEMON_TCG_API_URL = "https://api.pokemontcg.io/v2"
 
 
 class CardSyncService:
@@ -22,11 +19,23 @@ class CardSyncService:
 
     def __init__(self, db: AsyncSession):
         self.db = db
+        self.headers = {
+            "X-Api-Key": settings.pokemon_tcg_api_key
+        }
+
+    async def _api_get(self, endpoint: str, params: dict = None) -> dict:
+        """Make a GET request to the Pokemon TCG API"""
+        async with httpx.AsyncClient() as client:
+            url = f"{POKEMON_TCG_API_URL}/{endpoint}"
+            response = await client.get(url, headers=self.headers, params=params, timeout=30.0)
+            response.raise_for_status()
+            return response.json()
 
     async def sync_all_sets(self) -> dict:
         """Sync all card sets from the API"""
         try:
-            sets = PTCGSet.all()
+            data = await self._api_get("sets")
+            sets = data.get("data", [])
             synced = 0
             skipped = 0
 
@@ -41,13 +50,15 @@ class CardSyncService:
             return {"success": True, "synced": synced, "skipped": skipped}
 
         except Exception as e:
-            logger.error(f"Failed to sync sets: {str(e)}")
-            return {"success": False, "error": str(e)}
+            error_msg = repr(e)
+            logger.error(f"Failed to sync sets: {error_msg}")
+            return {"success": False, "error": error_msg}
 
     async def sync_set_cards(self, set_code: str) -> dict:
         """Sync all cards from a specific set"""
         try:
-            cards = PTCGCard.where(q=f'set.id:{set_code}')
+            data = await self._api_get("cards", params={"q": f"set.id:{set_code}", "pageSize": 250})
+            cards = data.get("data", [])
             synced = 0
             skipped = 0
             errors = []
@@ -60,7 +71,7 @@ class CardSyncService:
                     else:
                         skipped += 1
                 except Exception as e:
-                    errors.append(f"{ptcg_card.name}: {str(e)}")
+                    errors.append(f"{ptcg_card.get('name', 'Unknown')}: {repr(e)}")
                     skipped += 1
 
             logger.info(f"Synced {synced} cards from set {set_code}, skipped {skipped}")
@@ -68,23 +79,48 @@ class CardSyncService:
                 "success": True,
                 "synced": synced,
                 "skipped": skipped,
-                "errors": errors[:10]  # Limit errors shown
+                "errors": errors[:10]
             }
 
         except Exception as e:
-            logger.error(f"Failed to sync cards from set {set_code}: {str(e)}")
-            return {"success": False, "error": str(e)}
+            error_msg = repr(e)
+            logger.error(f"Failed to sync cards from set {set_code}: {error_msg}")
+            return {"success": False, "error": error_msg}
 
     async def sync_standard_legal_cards(self) -> dict:
         """Sync all standard legal cards"""
         try:
-            # Get standard legal regulation marks (F, G, H currently)
-            cards = PTCGCard.where(q='legalities.standard:legal')
+            # Get standard legal cards (paginated)
+            all_cards = []
+            page = 1
+            page_size = 250
+
+            while True:
+                data = await self._api_get("cards", params={
+                    "q": "legalities.standard:legal",
+                    "page": page,
+                    "pageSize": page_size
+                })
+                cards = data.get("data", [])
+                if not cards:
+                    break
+                all_cards.extend(cards)
+
+                # Check if there are more pages
+                total_count = data.get("totalCount", 0)
+                if len(all_cards) >= total_count:
+                    break
+                page += 1
+
+                # Safety limit
+                if page > 20:
+                    break
+
             synced = 0
             skipped = 0
             errors = []
 
-            for ptcg_card in cards:
+            for ptcg_card in all_cards:
                 try:
                     result = await self._sync_card(ptcg_card, is_standard=True)
                     if result:
@@ -92,7 +128,7 @@ class CardSyncService:
                     else:
                         skipped += 1
                 except Exception as e:
-                    errors.append(f"{ptcg_card.name}: {str(e)}")
+                    errors.append(f"{ptcg_card.get('name', 'Unknown')}: {repr(e)}")
                     skipped += 1
 
             logger.info(f"Synced {synced} standard legal cards, skipped {skipped}")
@@ -104,68 +140,80 @@ class CardSyncService:
             }
 
         except Exception as e:
-            logger.error(f"Failed to sync standard cards: {str(e)}")
-            return {"success": False, "error": str(e)}
+            error_msg = repr(e)
+            logger.error(f"Failed to sync standard cards: {error_msg}")
+            return {"success": False, "error": error_msg}
 
     async def search_cards(self, query: str, page: int = 1, page_size: int = 50) -> List[dict]:
         """Search cards from the API"""
         try:
-            cards = PTCGCard.where(q=f'name:{query}*', page=page, pageSize=page_size)
-            return [self._card_to_dict(card) for card in cards]
+            data = await self._api_get("cards", params={
+                "q": f"name:{query}*",
+                "page": page,
+                "pageSize": page_size
+            })
+            return [self._card_to_dict(card) for card in data.get("data", [])]
         except Exception as e:
-            logger.error(f"Failed to search cards: {str(e)}")
+            logger.error(f"Failed to search cards: {repr(e)}")
             return []
 
     async def get_card_by_id(self, card_id: str) -> Optional[dict]:
         """Get a specific card by ID from the API"""
         try:
-            card = PTCGCard.find(card_id)
+            data = await self._api_get(f"cards/{card_id}")
+            card = data.get("data")
             if card:
                 return self._card_to_dict(card)
             return None
         except Exception as e:
-            logger.error(f"Failed to get card {card_id}: {str(e)}")
+            logger.error(f"Failed to get card {card_id}: {repr(e)}")
             return None
 
-    async def _sync_set(self, ptcg_set) -> Optional[CardSet]:
+    async def _sync_set(self, ptcg_set: dict) -> Optional[CardSet]:
         """Sync a single set"""
+        set_id = ptcg_set.get("id")
+
         # Check if set already exists
         result = await self.db.execute(
-            select(CardSet).where(CardSet.code == ptcg_set.id)
+            select(CardSet).where(CardSet.code == set_id)
         )
         existing = result.scalar_one_or_none()
 
+        images = ptcg_set.get("images", {})
+
         if existing:
             # Update existing set
-            existing.name = ptcg_set.name
-            existing.series = ptcg_set.series
-            existing.release_date = ptcg_set.releaseDate
-            existing.total_cards = ptcg_set.total
-            existing.logo_url = ptcg_set.images.logo if ptcg_set.images else None
-            existing.symbol_url = ptcg_set.images.symbol if ptcg_set.images else None
+            existing.name = ptcg_set.get("name")
+            existing.series = ptcg_set.get("series")
+            existing.release_date = ptcg_set.get("releaseDate")
+            existing.total_cards = ptcg_set.get("total")
+            existing.logo_url = images.get("logo") if images else None
+            existing.symbol_url = images.get("symbol") if images else None
             await self.db.flush()
             return None  # Return None to count as skipped (already exists)
 
         # Create new set
         card_set = CardSet(
-            code=ptcg_set.id,
-            name=ptcg_set.name,
-            series=ptcg_set.series,
-            release_date=ptcg_set.releaseDate,
-            total_cards=ptcg_set.total,
-            logo_url=ptcg_set.images.logo if ptcg_set.images else None,
-            symbol_url=ptcg_set.images.symbol if ptcg_set.images else None,
+            code=set_id,
+            name=ptcg_set.get("name"),
+            series=ptcg_set.get("series"),
+            release_date=ptcg_set.get("releaseDate"),
+            total_cards=ptcg_set.get("total"),
+            logo_url=images.get("logo") if images else None,
+            symbol_url=images.get("symbol") if images else None,
         )
         self.db.add(card_set)
         await self.db.flush()
         logger.debug(f"Created set: {card_set.name}")
         return card_set
 
-    async def _sync_card(self, ptcg_card, is_standard: bool = False) -> Optional[Card]:
+    async def _sync_card(self, ptcg_card: dict, is_standard: bool = False) -> Optional[Card]:
         """Sync a single card"""
+        card_id = ptcg_card.get("id")
+
         # Check if card already exists
         result = await self.db.execute(
-            select(Card).where(Card.ptcg_id == ptcg_card.id)
+            select(Card).where(Card.ptcg_id == card_id)
         )
         existing = result.scalar_one_or_none()
 
@@ -174,67 +222,77 @@ class CardSyncService:
 
         # Get or create the set
         card_set = None
-        if ptcg_card.set:
+        ptcg_set = ptcg_card.get("set")
+        if ptcg_set:
             result = await self.db.execute(
-                select(CardSet).where(CardSet.code == ptcg_card.set.id)
+                select(CardSet).where(CardSet.code == ptcg_set.get("id"))
             )
             card_set = result.scalar_one_or_none()
 
             if not card_set:
+                images = ptcg_set.get("images", {})
                 card_set = CardSet(
-                    code=ptcg_card.set.id,
-                    name=ptcg_card.set.name,
-                    series=ptcg_card.set.series,
-                    release_date=ptcg_card.set.releaseDate,
-                    total_cards=ptcg_card.set.total,
-                    logo_url=ptcg_card.set.images.logo if ptcg_card.set.images else None,
-                    symbol_url=ptcg_card.set.images.symbol if ptcg_card.set.images else None,
+                    code=ptcg_set.get("id"),
+                    name=ptcg_set.get("name"),
+                    series=ptcg_set.get("series"),
+                    release_date=ptcg_set.get("releaseDate"),
+                    total_cards=ptcg_set.get("total"),
+                    logo_url=images.get("logo") if images else None,
+                    symbol_url=images.get("symbol") if images else None,
                 )
                 self.db.add(card_set)
                 await self.db.flush()
 
         # Parse card data
-        card_type = self._parse_card_type(ptcg_card.supertype)
-        subtype = self._parse_subtype(ptcg_card.subtypes[0] if ptcg_card.subtypes else None)
-        energy_type = self._parse_energy_type(ptcg_card.types[0] if ptcg_card.types else None)
+        card_type = self._parse_card_type(ptcg_card.get("supertype"))
+        subtypes = ptcg_card.get("subtypes", [])
+        subtype = self._parse_subtype(subtypes[0] if subtypes else None)
+        types = ptcg_card.get("types", [])
+        energy_type = self._parse_energy_type(types[0] if types else None)
 
         # Determine legality
-        is_standard_legal = False
-        is_expanded_legal = False
-        if ptcg_card.legalities:
-            is_standard_legal = getattr(ptcg_card.legalities, 'standard', None) == 'Legal'
-            is_expanded_legal = getattr(ptcg_card.legalities, 'expanded', None) == 'Legal'
+        legalities = ptcg_card.get("legalities", {})
+        is_standard_legal = legalities.get("standard") == "Legal"
+        is_expanded_legal = legalities.get("expanded") == "Legal"
 
         # Parse weaknesses and resistances
         weakness = None
-        if ptcg_card.weaknesses:
-            weakness = f"{ptcg_card.weaknesses[0].type} {ptcg_card.weaknesses[0].value}"
+        weaknesses = ptcg_card.get("weaknesses", [])
+        if weaknesses:
+            weakness = f"{weaknesses[0].get('type', '')} {weaknesses[0].get('value', '')}"
 
         resistance = None
-        if ptcg_card.resistances:
-            resistance = f"{ptcg_card.resistances[0].type} {ptcg_card.resistances[0].value}"
+        resistances = ptcg_card.get("resistances", [])
+        if resistances:
+            resistance = f"{resistances[0].get('type', '')} {resistances[0].get('value', '')}"
+
+        # Get images
+        images = ptcg_card.get("images", {})
+
+        # Get retreat cost
+        retreat_cost = ptcg_card.get("retreatCost", [])
 
         # Create card
         card = Card(
-            ptcg_id=ptcg_card.id,
-            name=ptcg_card.name,
+            ptcg_id=card_id,
+            name=ptcg_card.get("name"),
             card_type=card_type,
             subtype=subtype,
             set_id=card_set.id if card_set else None,
-            set_number=ptcg_card.number,
-            hp=self._parse_int(ptcg_card.hp),
+            set_number=ptcg_card.get("number"),
+            hp=self._parse_int(ptcg_card.get("hp")),
             energy_type=energy_type,
             weakness=weakness,
             resistance=resistance,
-            retreat_cost=len(ptcg_card.retreatCost) if ptcg_card.retreatCost else None,
-            abilities=self._parse_abilities(ptcg_card.abilities),
-            attacks=self._parse_attacks(ptcg_card.attacks),
-            rules="\n".join(ptcg_card.rules) if ptcg_card.rules else None,
-            image_small=ptcg_card.images.small if ptcg_card.images else None,
-            image_large=ptcg_card.images.large if ptcg_card.images else None,
-            rarity=ptcg_card.rarity,
-            artist=ptcg_card.artist,
-            regulation_mark=ptcg_card.regulationMark,
+            retreat_cost=len(retreat_cost) if retreat_cost else None,
+            abilities=self._parse_abilities(ptcg_card.get("abilities")),
+            attacks=self._parse_attacks(ptcg_card.get("attacks")),
+            rules="\n".join(ptcg_card.get("rules", [])) if ptcg_card.get("rules") else None,
+            image_small=images.get("small") if images else None,
+            image_large=images.get("large") if images else None,
+            rarity=ptcg_card.get("rarity"),
+            artist=ptcg_card.get("artist"),
+            regulation_mark=ptcg_card.get("regulationMark"),
             is_standard_legal=is_standard_legal,
             is_expanded_legal=is_expanded_legal,
         )
@@ -244,34 +302,38 @@ class CardSyncService:
         logger.debug(f"Synced card: {card.name}")
         return card
 
-    def _card_to_dict(self, ptcg_card) -> dict:
-        """Convert a Pokemon TCG SDK card to a dict"""
+    def _card_to_dict(self, ptcg_card: dict) -> dict:
+        """Convert a Pokemon TCG API card to a dict"""
+        ptcg_set = ptcg_card.get("set", {})
+        images = ptcg_card.get("images", {})
+        legalities = ptcg_card.get("legalities", {})
+
         return {
-            "id": ptcg_card.id,
-            "name": ptcg_card.name,
-            "supertype": ptcg_card.supertype,
-            "subtypes": ptcg_card.subtypes,
-            "types": ptcg_card.types,
-            "hp": ptcg_card.hp,
-            "number": ptcg_card.number,
-            "rarity": ptcg_card.rarity,
-            "artist": ptcg_card.artist,
-            "regulation_mark": ptcg_card.regulationMark,
+            "id": ptcg_card.get("id"),
+            "name": ptcg_card.get("name"),
+            "supertype": ptcg_card.get("supertype"),
+            "subtypes": ptcg_card.get("subtypes"),
+            "types": ptcg_card.get("types"),
+            "hp": ptcg_card.get("hp"),
+            "number": ptcg_card.get("number"),
+            "rarity": ptcg_card.get("rarity"),
+            "artist": ptcg_card.get("artist"),
+            "regulation_mark": ptcg_card.get("regulationMark"),
             "set": {
-                "id": ptcg_card.set.id,
-                "name": ptcg_card.set.name,
-                "series": ptcg_card.set.series,
-            } if ptcg_card.set else None,
+                "id": ptcg_set.get("id"),
+                "name": ptcg_set.get("name"),
+                "series": ptcg_set.get("series"),
+            } if ptcg_set else None,
             "images": {
-                "small": ptcg_card.images.small,
-                "large": ptcg_card.images.large,
-            } if ptcg_card.images else None,
-            "attacks": self._parse_attacks(ptcg_card.attacks),
-            "abilities": self._parse_abilities(ptcg_card.abilities),
+                "small": images.get("small"),
+                "large": images.get("large"),
+            } if images else None,
+            "attacks": self._parse_attacks(ptcg_card.get("attacks")),
+            "abilities": self._parse_abilities(ptcg_card.get("abilities")),
             "legalities": {
-                "standard": getattr(ptcg_card.legalities, 'standard', None),
-                "expanded": getattr(ptcg_card.legalities, 'expanded', None),
-            } if ptcg_card.legalities else None,
+                "standard": legalities.get("standard"),
+                "expanded": legalities.get("expanded"),
+            } if legalities else None,
         }
 
     def _parse_card_type(self, supertype: str) -> CardType:
@@ -338,32 +400,32 @@ class CardSyncService:
         }
         return energy_map.get(energy_str)
 
-    def _parse_abilities(self, abilities) -> Optional[list]:
+    def _parse_abilities(self, abilities: list) -> Optional[list]:
         """Parse abilities from API response"""
         if not abilities:
             return None
 
         return [
             {
-                "name": ab.name,
-                "text": ab.text,
-                "type": ab.type,
+                "name": ab.get("name"),
+                "text": ab.get("text"),
+                "type": ab.get("type"),
             }
             for ab in abilities
         ]
 
-    def _parse_attacks(self, attacks) -> Optional[list]:
+    def _parse_attacks(self, attacks: list) -> Optional[list]:
         """Parse attacks from API response"""
         if not attacks:
             return None
 
         return [
             {
-                "name": atk.name,
-                "cost": atk.cost,
-                "damage": atk.damage,
-                "text": atk.text,
-                "convertedEnergyCost": atk.convertedEnergyCost,
+                "name": atk.get("name"),
+                "cost": atk.get("cost"),
+                "damage": atk.get("damage"),
+                "text": atk.get("text"),
+                "convertedEnergyCost": atk.get("convertedEnergyCost"),
             }
             for atk in attacks
         ]
