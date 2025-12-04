@@ -24,12 +24,22 @@ class CardSyncService:
         }
 
     async def _api_get(self, endpoint: str, params: dict = None) -> dict:
-        """Make a GET request to the Pokemon TCG API"""
+        """Make a GET request to the Pokemon TCG API with retry logic"""
         async with httpx.AsyncClient() as client:
             url = f"{POKEMON_TCG_API_URL}/{endpoint}"
-            response = await client.get(url, headers=self.headers, params=params, timeout=30.0)
-            response.raise_for_status()
-            return response.json()
+
+            # Retry up to 3 times with increasing timeout
+            for attempt in range(3):
+                try:
+                    timeout = 60.0 + (attempt * 30)  # 60s, 90s, 120s
+                    response = await client.get(url, headers=self.headers, params=params, timeout=timeout)
+                    response.raise_for_status()
+                    return response.json()
+                except httpx.TimeoutException:
+                    if attempt == 2:  # Last attempt
+                        raise
+                    logger.warning(f"API timeout, retrying... (attempt {attempt + 2}/3)")
+                    continue
 
     async def sync_all_sets(self) -> dict:
         """Sync all card sets from the API"""
