@@ -50,6 +50,7 @@ class Deck(Base, TimestampMixin):
         cascade="all, delete-orphan"
     )
     matches: Mapped[List["Match"]] = relationship("Match", back_populates="deck")
+    tournaments: Mapped[List["Tournament"]] = relationship("Tournament", back_populates="deck")
 
     def __repr__(self) -> str:
         return f"<Deck {self.name} ({self.format.value})>"
@@ -76,3 +77,4 @@ class DeckCard(Base):
 # Import here to avoid circular imports
 from app.models.card import Card
 from app.models.match import Match
+from app.models.tournament import Tournament

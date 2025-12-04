@@ -29,9 +29,12 @@ class User(Base, TimestampMixin):
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False)
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
 
-    # Relationships (add these to related models)
-    # decks: Mapped[List["Deck"]] = relationship("Deck", back_populates="owner")
-    # matches: Mapped[List["Match"]] = relationship("Match", back_populates="user")
+    # Relationships
+    tournaments: Mapped[List["Tournament"]] = relationship("Tournament", back_populates="user")
 
     def __repr__(self) -> str:
         return f"<User {self.username}>"
+
+
+# Import here to avoid circular imports
+from app.models.tournament import Tournament

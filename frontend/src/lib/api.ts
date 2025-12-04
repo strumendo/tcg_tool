@@ -284,3 +284,85 @@ export const setAuthToken = (token: string | null) => {
     delete api.defaults.headers.common['Authorization'];
   }
 };
+
+// Tournaments
+export const getTournaments = (params?: {
+  page?: number;
+  page_size?: number;
+  format?: string;
+  tournament_type?: string;
+  status?: string;
+  year?: number;
+  sort_by?: 'event_date' | 'created_at' | 'name';
+  sort_order?: 'asc' | 'desc';
+}) => api.get('/tournaments', { params });
+
+export const getTournament = (id: number) => api.get(`/tournaments/${id}`);
+
+export const getTournamentStats = (params?: { year?: number; format?: string }) =>
+  api.get('/tournaments/stats', { params });
+
+export const createTournament = (data: {
+  name: string;
+  format?: string;
+  tournament_type?: string;
+  event_date: string;
+  location?: string;
+  organizer?: string;
+  total_rounds?: number;
+  total_players?: number;
+  entry_fee?: number;
+  deck_id?: number;
+  deck_archetype?: string;
+  notes?: string;
+}) => api.post('/tournaments', data);
+
+export const updateTournament = (id: number, data: Partial<{
+  name: string;
+  format: string;
+  tournament_type: string;
+  event_date: string;
+  location: string;
+  organizer: string;
+  total_rounds: number;
+  total_players: number;
+  entry_fee: number;
+  status: string;
+  final_standing: number;
+  final_record: string;
+  championship_points: number;
+  deck_id: number;
+  deck_archetype: string;
+  notes: string;
+}>) => api.put(`/tournaments/${id}`, data);
+
+export const deleteTournament = (id: number) => api.delete(`/tournaments/${id}`);
+
+export const completeTournament = (id: number, finalStanding?: number, championshipPoints?: number) =>
+  api.post(`/tournaments/${id}/complete`, null, {
+    params: { final_standing: finalStanding, championship_points: championshipPoints }
+  });
+
+// Tournament Rounds
+export const addTournamentRound = (tournamentId: number, data: {
+  round_number: number;
+  is_top_cut?: boolean;
+  top_cut_round?: string;
+  opponent_name?: string;
+  opponent_deck?: string;
+  opponent_archetype?: string;
+  result: 'win' | 'loss' | 'tie' | 'bye' | 'id';
+  games_won?: number;
+  games_lost?: number;
+  went_first_game1?: boolean;
+  went_first_game2?: boolean;
+  went_first_game3?: boolean;
+  notes?: string;
+  key_plays?: string;
+}) => api.post(`/tournaments/${tournamentId}/rounds`, data);
+
+export const updateTournamentRound = (tournamentId: number, roundId: number, data: any) =>
+  api.put(`/tournaments/${tournamentId}/rounds/${roundId}`, data);
+
+export const deleteTournamentRound = (tournamentId: number, roundId: number) =>
+  api.delete(`/tournaments/${tournamentId}/rounds/${roundId}`);
