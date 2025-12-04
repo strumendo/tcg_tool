@@ -36,8 +36,9 @@ pydantic-settings==2.2.1
 httpx==0.27.0
 aiohttp==3.9.3
 
-# Pokemon TCG API
+# Pokemon TCG APIs
 pokemontcgsdk==3.13.0
+tcgdex-sdk==1.0.0
 
 # Authentication
 python-jose[cryptography]==3.3.0

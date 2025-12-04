@@ -44,6 +44,10 @@ class Settings(BaseSettings):
     anthropic_api_key: Optional[str] = None
     pokemon_tcg_api_key: str = "3c9a2ed2-0c55-4550-99e3-a65d96814e07"
 
+    # TCGdex Settings (multilingual)
+    default_language: str = "en"  # en, fr, de, es, it, pt, ja, zh-tw, id, th
+    supported_languages: list[str] = ["en", "fr", "de", "es", "it", "pt", "ja", "zh-tw", "id", "th"]
+
     # Security
     secret_key: str = "your-secret-key-change-in-production"
     algorithm: str = "HS256"

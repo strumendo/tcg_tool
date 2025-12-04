@@ -205,11 +205,92 @@ async def search_api_cards(
     q: str = Query(..., min_length=2, description="Search query"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=50),
+    lang: str = Query("en", description="Language code (en, fr, de, es, it, pt, ja, zh-tw, id, th)"),
     db: AsyncSession = Depends(get_db)
 ):
-    """Search cards directly from Pokemon TCG API (doesn't save to DB)"""
-    from app.services.card_sync import CardSyncService
+    """Search cards from TCGdex (multilingual) with Pokemon TCG API fallback"""
+    from app.services.card_api import DualCardApiService
 
-    sync_service = CardSyncService(db)
-    cards = await sync_service.search_cards(q, page, page_size)
-    return {"cards": cards, "query": q, "page": page}
+    api_service = DualCardApiService(db, language=lang)
+    result = await api_service.search_cards(q, page, page_size)
+    return result
+
+
+@router.get("/api/card/{card_id}")
+async def get_api_card(
+    card_id: str,
+    lang: str = Query("en", description="Language code"),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get a specific card from external API with multilingual support"""
+    from app.services.card_api import DualCardApiService
+
+    api_service = DualCardApiService(db, language=lang)
+    result = await api_service.get_card(card_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="Card not found")
+    return result
+
+
+@router.get("/api/sets")
+async def get_api_sets(
+    lang: str = Query("en", description="Language code"),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get all card sets from external API with multilingual support"""
+    from app.services.card_api import DualCardApiService
+
+    api_service = DualCardApiService(db, language=lang)
+    return await api_service.get_sets()
+
+
+@router.get("/api/set/{set_id}")
+async def get_api_set(
+    set_id: str,
+    lang: str = Query("en", description="Language code"),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get a specific set from external API"""
+    from app.services.card_api import DualCardApiService
+
+    api_service = DualCardApiService(db, language=lang)
+    result = await api_service.get_set(set_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="Set not found")
+    return result
+
+
+@router.get("/api/set/{set_id}/cards")
+async def get_api_set_cards(
+    set_id: str,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(100, ge=1, le=250),
+    lang: str = Query("en", description="Language code"),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get all cards from a specific set with multilingual support"""
+    from app.services.card_api import DualCardApiService
+
+    api_service = DualCardApiService(db, language=lang)
+    return await api_service.get_set_cards(set_id, page, page_size)
+
+
+@router.get("/languages")
+async def get_supported_languages():
+    """Get list of supported languages for card data"""
+    from app.core.config import settings
+    return {
+        "default": settings.default_language,
+        "supported": [
+            {"code": "en", "name": "English"},
+            {"code": "fr", "name": "Français"},
+            {"code": "de", "name": "Deutsch"},
+            {"code": "es", "name": "Español"},
+            {"code": "it", "name": "Italiano"},
+            {"code": "pt", "name": "Português"},
+            {"code": "ja", "name": "日本語"},
+            {"code": "zh-tw", "name": "繁體中文"},
+            {"code": "id", "name": "Bahasa Indonesia"},
+            {"code": "th", "name": "ภาษาไทย"},
+        ]
+    }

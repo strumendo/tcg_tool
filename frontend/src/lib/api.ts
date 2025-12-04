@@ -65,6 +65,29 @@ export const importCards = (file: File) => {
 
 export const getCardSets = () => api.get('/cards/sets/');
 
+// Multilingual Card API (TCGdex + Pokemon TCG API fallback)
+export const searchCardsApi = (q: string, page?: number, pageSize?: number, lang?: string) =>
+  api.get('/cards/api/search', { params: { q, page, page_size: pageSize, lang } });
+
+export const getCardApi = (cardId: string, lang?: string) =>
+  api.get(`/cards/api/card/${cardId}`, { params: { lang } });
+
+export const getSetsApi = (lang?: string) =>
+  api.get('/cards/api/sets', { params: { lang } });
+
+export const getSetApi = (setId: string, lang?: string) =>
+  api.get(`/cards/api/set/${setId}`, { params: { lang } });
+
+export const getSetCardsApi = (setId: string, page?: number, pageSize?: number, lang?: string) =>
+  api.get(`/cards/api/set/${setId}/cards`, { params: { page, page_size: pageSize, lang } });
+
+export const getSupportedLanguages = () => api.get('/cards/languages');
+
+// Sync cards from external API
+export const syncSets = () => api.post('/cards/sync/sets');
+export const syncSetCards = (setCode: string) => api.post(`/cards/sync/set/${setCode}`);
+export const syncStandardCards = () => api.post('/cards/sync/standard');
+
 // Decks
 export const getDecks = (params?: { page?: number; format?: string; archetype?: string }) =>
   api.get('/decks', { params });
