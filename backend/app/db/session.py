@@ -3,15 +3,21 @@ from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from app.core.config import settings
 
-# Create async engine
-engine = create_async_engine(
-    settings.database_url,
-    echo=settings.debug,
-    future=True,
-    pool_pre_ping=True,
-    pool_size=10,
-    max_overflow=20,
-)
+# Create async engine with appropriate settings based on database type
+engine_kwargs = {
+    "echo": settings.debug,
+    "future": True,
+}
+
+# SQLite doesn't support connection pooling options
+if not settings.database_url.startswith("sqlite"):
+    engine_kwargs.update({
+        "pool_pre_ping": True,
+        "pool_size": 10,
+        "max_overflow": 20,
+    })
+
+engine = create_async_engine(settings.database_url, **engine_kwargs)
 
 # Create async session factory
 AsyncSessionLocal = async_sessionmaker(
