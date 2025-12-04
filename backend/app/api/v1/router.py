@@ -3,7 +3,7 @@ from fastapi import APIRouter
 
 from app.api.v1.endpoints import (
     cards, decks, matches, videos, youtube_channels, meta,
-    health, dashboard, auth, tournaments
+    health, dashboard, auth, tournaments, coaching
 )
 
 api_router = APIRouter()
@@ -21,3 +21,4 @@ api_router.include_router(meta.router, prefix="/meta", tags=["meta"])
 api_router.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
 api_router.include_router(tournaments.router, prefix="/tournaments", tags=["tournaments"])
+api_router.include_router(coaching.router, prefix="/coaching", tags=["coaching"])

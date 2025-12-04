@@ -366,3 +366,19 @@ export const updateTournamentRound = (tournamentId: number, roundId: number, dat
 
 export const deleteTournamentRound = (tournamentId: number, roundId: number) =>
   api.delete(`/tournaments/${tournamentId}/rounds/${roundId}`);
+
+// AI Coaching
+export const analyzeDeck = (deckId: number) =>
+  api.get(`/coaching/deck/${deckId}`);
+
+export const getMatchupAdvice = (deckId: number, opponentArchetype: string) =>
+  api.get('/coaching/matchup', { params: { deck_id: deckId, opponent_archetype: opponentArchetype } });
+
+export const getImprovementPlan = () =>
+  api.get('/coaching/improvement-plan');
+
+export const getQuickTips = (archetype?: string, opponent?: string) =>
+  api.get('/coaching/quick-tips', { params: { archetype, opponent } });
+
+export const getMetaPositioning = (archetype: string) =>
+  api.get('/coaching/meta-positioning', { params: { archetype } });

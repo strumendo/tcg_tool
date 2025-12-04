@@ -15,6 +15,7 @@ const navigation = [
   { name: 'Videos', href: '/videos' },
   { name: 'Matches', href: '/matches' },
   { name: 'Tournaments', href: '/tournaments' },
+  { name: 'Coach', href: '/coaching' },
   { name: 'Meta', href: '/meta' },
   { name: 'Channels', href: '/channels' },
 ];
