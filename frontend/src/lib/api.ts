@@ -382,3 +382,26 @@ export const getQuickTips = (archetype?: string, opponent?: string) =>
 
 export const getMetaPositioning = (archetype: string) =>
   api.get('/coaching/meta-positioning', { params: { archetype } });
+
+// Export & Sharing
+export const exportDeck = (deckId: number, format: 'text' | 'ptcgo' | 'json' | 'limitless' = 'text') =>
+  api.get(`/export/deck/${deckId}`, { params: { format }, responseType: format === 'json' ? 'json' : 'text' });
+
+export const getDeckForClipboard = (deckId: number, format: 'text' | 'ptcgo' | 'limitless' = 'text') =>
+  api.get(`/export/deck/${deckId}/clipboard`, { params: { format } });
+
+export const exportTournament = (tournamentId: number, format: 'json' | 'csv' = 'json') =>
+  api.get(`/export/tournament/${tournamentId}`, { params: { format }, responseType: format === 'json' ? 'json' : 'text' });
+
+export const getTournamentSummary = (tournamentId: number) =>
+  api.get(`/export/tournament/${tournamentId}/summary`);
+
+export const exportMatches = (format: 'json' | 'csv' = 'json', deckId?: number) =>
+  api.get('/export/matches', { params: { format, deck_id: deckId }, responseType: format === 'json' ? 'json' : 'text' });
+
+export const exportStats = () => api.get('/export/stats');
+
+export const getDeckShareData = (deckId: number) =>
+  api.get(`/export/share/deck/${deckId}`);
+
+export const getStatsShareData = () => api.get('/export/share/stats');

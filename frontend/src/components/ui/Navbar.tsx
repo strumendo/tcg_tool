@@ -95,6 +95,19 @@ export function Navbar() {
                           </Menu.Item>
                           <Menu.Item>
                             {({ active }) => (
+                              <Link
+                                href="/export"
+                                className={clsx(
+                                  'block px-4 py-2 text-sm',
+                                  active ? 'bg-gray-100 text-gray-900' : 'text-gray-700'
+                                )}
+                              >
+                                Export & Share
+                              </Link>
+                            )}
+                          </Menu.Item>
+                          <Menu.Item>
+                            {({ active }) => (
                               <button
                                 onClick={handleLogout}
                                 className={clsx(
