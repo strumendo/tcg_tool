@@ -1,12 +1,12 @@
 """Deck Import Service - Import decks from text/files"""
 import re
-from typing import Optional
+from typing import Optional, List
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 import structlog
 
 from app.models.deck import Deck, DeckCard, DeckFormat
-from app.models.card import Card, CardType
+from app.models.card import Card, CardSet, CardType
 
 logger = structlog.get_logger()
 
@@ -162,31 +162,45 @@ class DeckImportService:
         set_code: Optional[str],
         set_number: Optional[str]
     ) -> Optional[Card]:
-        """Find a card in the database"""
+        """Find a card in the database - prioritizes set_code + set_number for language independence"""
         from sqlalchemy.orm import selectinload
 
-        # If we have set code and number, search precisely
+        # PRIORITY 1: Search by set_code + set_number (language independent!)
         if set_code and set_number:
+            # Normalize set codes (handle common variations)
+            normalized_set_code = self._normalize_set_code(set_code)
+
             query = select(Card).options(selectinload(Card.set)).where(
-                Card.name == name,
                 Card.set_number == set_number
-            ).join(Card.set).where(Card.set.has(code=set_code))
+            ).join(Card.set).where(CardSet.code == normalized_set_code)
 
             result = await self.db.execute(query)
             card = result.scalar_one_or_none()
             if card:
+                logger.debug(f"Found card by set/number: {card.name} ({normalized_set_code} {set_number})")
                 return card
 
-        # Fall back to name-only search
+            # Try alternative set code formats
+            for alt_code in self._get_alternative_set_codes(set_code):
+                query = select(Card).options(selectinload(Card.set)).where(
+                    Card.set_number == set_number
+                ).join(Card.set).where(CardSet.code == alt_code)
+
+                result = await self.db.execute(query)
+                card = result.scalar_one_or_none()
+                if card:
+                    logger.debug(f"Found card with alt set code: {card.name} ({alt_code} {set_number})")
+                    return card
+
+        # PRIORITY 2: Search by exact name
         query = select(Card).where(Card.name == name)
         result = await self.db.execute(query)
         cards = result.scalars().all()
 
         if cards:
-            # Return the first match (or most recent if we had dates)
             return cards[0]
 
-        # Try partial name match
+        # PRIORITY 3: Try partial name match
         query = select(Card).where(Card.name.ilike(f"%{name}%"))
         result = await self.db.execute(query)
         cards = result.scalars().all()
@@ -194,7 +208,48 @@ class DeckImportService:
         if cards:
             return cards[0]
 
+        logger.warning(f"Card not found: {name} (set: {set_code}, number: {set_number})")
         return None
+
+    def _normalize_set_code(self, set_code: str) -> str:
+        """Normalize set code to Pokemon TCG API format"""
+        # Common Portuguese/Brazilian set code mappings to API codes
+        set_code_map = {
+            # Scarlet & Violet era
+            "PAF": "sv4pt5",  # Paldean Fates
+            "PFL": "sv6pt5",  # Paldean Fates (alt) / Prismatic Evolutions?
+            "OBF": "sv3",     # Obsidian Flames
+            "MEW": "sv3pt5",  # 151 / Mew
+            "SFA": "sv6",     # Shrouded Fable
+            "TWM": "sv6",     # Twilight Masquerade
+            "MEP": "sv3pt5",  # 151 (Portuguese?)
+            "MEG": "sv1",     # Scarlet & Violet Base? (Portuguese)
+            "PAR": "sv4",     # Paradox Rift
+            "PAL": "sv2",     # Paldea Evolved
+            "TEF": "sv5",     # Temporal Forces
+            "MEE": "sve",     # Energies
+            "SVI": "sv1",     # Scarlet & Violet Base
+            "SVE": "sve",     # Scarlet & Violet Energies
+            # Add more mappings as needed
+        }
+        return set_code_map.get(set_code.upper(), set_code.lower())
+
+    def _get_alternative_set_codes(self, set_code: str) -> List[str]:
+        """Get alternative set codes to try"""
+        code = set_code.upper()
+        alternatives = []
+
+        # Try lowercase
+        alternatives.append(code.lower())
+
+        # Try with different formats
+        if code.startswith("SV"):
+            alternatives.append(code.lower())
+        elif len(code) == 3:
+            # Try sv prefix for newer sets
+            alternatives.append(f"sv{code.lower()}")
+
+        return alternatives
 
     async def _determine_archetype(self, deck: Deck) -> Optional[str]:
         """Try to determine deck archetype from main Pokemon"""
