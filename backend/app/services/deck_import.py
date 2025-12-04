@@ -106,6 +106,20 @@ class DeckImportService:
 
         Returns: (quantity, card_name, set_code, set_number) or None
         """
+        # Remove trailing semicolon if present
+        line = line.rstrip(';').strip()
+
+        # CSV format: "3, Charmander, PAF, 7" or "3,Charmander,PAF,7"
+        csv_pattern = r"^(\d+)\s*,\s*(.+?)\s*,\s*([A-Z]{2,4})\s*,\s*(\d+)$"
+        match = re.match(csv_pattern, line, re.IGNORECASE)
+        if match:
+            return (
+                int(match.group(1)),
+                match.group(2).strip(),
+                match.group(3).upper(),
+                match.group(4)
+            )
+
         # PTCGO format: "4 Charizard ex SVI 125"
         # Pattern: quantity name set_code set_number
         ptcgo_pattern = r"^(\d+)\s+(.+?)\s+([A-Z]{2,4})\s+(\d+)$"
