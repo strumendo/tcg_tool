@@ -243,3 +243,18 @@ export const importMetaFromFile = (file: File, name?: string) => {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
 };
+
+// Dashboard
+export const getDashboardStats = () => api.get('/dashboard/stats');
+
+export const getRecentActivity = (limit?: number) =>
+  api.get('/dashboard/activity', { params: { limit } });
+
+export const getMatchupSummary = (deckId?: number, days?: number) =>
+  api.get('/dashboard/matchup-summary', { params: { deck_id: deckId, days } });
+
+export const getWinRateTrend = (deckId?: number, days?: number) =>
+  api.get('/dashboard/win-rate-trend', { params: { deck_id: deckId, days } });
+
+export const getTopDecks = (limit?: number) =>
+  api.get('/dashboard/top-decks', { params: { limit } });
