@@ -258,3 +258,29 @@ export const getWinRateTrend = (deckId?: number, days?: number) =>
 
 export const getTopDecks = (limit?: number) =>
   api.get('/dashboard/top-decks', { params: { limit } });
+
+// Auth
+export const register = (data: { email: string; username: string; password: string; display_name?: string }) =>
+  api.post('/auth/register', data);
+
+export const login = (data: { email: string; password: string }) =>
+  api.post('/auth/login/json', data);
+
+export const getCurrentUser = () => api.get('/auth/me');
+
+export const updateProfile = (data: { display_name?: string; bio?: string; preferred_language?: string }) =>
+  api.put('/auth/me', data);
+
+export const changePassword = (currentPassword: string, newPassword: string) =>
+  api.post('/auth/change-password', null, { params: { current_password: currentPassword, new_password: newPassword } });
+
+export const checkAuth = () => api.get('/auth/check');
+
+// Helper to set auth token
+export const setAuthToken = (token: string | null) => {
+  if (token) {
+    api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+  } else {
+    delete api.defaults.headers.common['Authorization'];
+  }
+};
