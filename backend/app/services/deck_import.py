@@ -95,7 +95,14 @@ class DeckImportService:
             deck.archetype = await self._determine_archetype(deck)
 
         await self.db.flush()
-        await self.db.refresh(deck)
+
+        # Reload deck with all relationships for proper serialization
+        from sqlalchemy.orm import selectinload
+        query = select(Deck).options(
+            selectinload(Deck.cards).selectinload(DeckCard.card)
+        ).where(Deck.id == deck.id)
+        result = await self.db.execute(query)
+        deck = result.scalar_one()
 
         logger.info(f"Imported deck: {deck.name} with {total_count} cards")
         return deck
