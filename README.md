@@ -19,11 +19,28 @@ Ferramenta CLI para analisar decks de Pokemon TCG, verificar o impacto da rotaç
 
 ## Instalação
 
+### Com ambiente virtual (recomendado)
+
+```bash
+# Criar ambiente virtual
+python3 -m venv venv
+
+# Ativar ambiente virtual
+source venv/bin/activate  # Linux/Mac
+# ou
+venv\Scripts\activate     # Windows
+
+# Instalar dependências
+pip install -r requirements.txt
+```
+
+### Instalação rápida (se permitido)
+
 ```bash
 pip install -r requirements.txt
 ```
 
-Dependências:
+### Dependências
 - `httpx` - Cliente HTTP para APIs
 - `rich` - Interface CLI com formatação
 
