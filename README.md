@@ -1,26 +1,19 @@
 # TCG Rotation Checker
 
-Ferramenta CLI para analisar decks de Pokemon TCG e verificar o impacto da rotação de março de 2026.
+Ferramenta CLI para analisar decks de Pokemon TCG, verificar o impacto da rotação de março de 2026 e comparar matchups contra outros decks.
 
-## Sobre a Rotação
+## Funcionalidades
 
-Em **março de 2026**, todas as cartas com **Regulation Mark G** sairão do formato Standard. Isso inclui os sets:
-- Scarlet & Violet (SVI)
-- Paldea Evolved (PAL)
-- Obsidian Flames (OBF)
-- Pokemon 151 (MEW)
-- Paradox Rift (PAR)
-- Paldean Fates (PAF)
+### 1. Análise de Rotação
+- Identifica cartas com **Regulation Mark G** que rotacionam em março 2026
+- Detecta cartas já ilegais (Regulation Mark F ou anterior)
+- Busca substituições na coleção Ascended Heroes (ASC)
 
-## O que a ferramenta faz
-
-1. **Analisa seu deck** - Cole seu deck no formato PTCGO
-2. **Categoriza as cartas**:
-   - 🔴 **Rotacionando** - Regulation Mark G (sai em março 2026)
-   - 🟣 **Já Ilegal** - Regulation Mark F ou anterior (já rotacionou)
-   - 🟢 **Seguro** - Regulation Mark H, I ou posterior
-3. **Busca substituições** - Procura cartas equivalentes na coleção Ascended Heroes (ASC)
-4. **Calcula compatibilidade** - Análise percentual baseada em tipo, função e arquétipo
+### 2. Comparação de Decks
+- Compara seu deck contra decks do meta/oponentes
+- Identifica cartas em comum e únicas
+- Analisa vantagens de matchup (tipos, consistência, velocidade)
+- Suporta comparação contra múltiplos decks
 
 ## Instalação
 
@@ -34,16 +27,38 @@ Dependências:
 
 ## Uso
 
-### Modo interativo
+### Modo Interativo
 ```bash
 python main.py
 ```
 
-Cole seu deck no formato PTCGO e pressione Enter duas vezes.
+Exibe um menu com 3 opções:
+1. Análise de rotação
+2. Comparação de decks
+3. Ambos
 
-### Com arquivo
+### Com Arquivo
 ```bash
 python main.py meu_deck.txt
+```
+
+### Opções de Linha de Comando
+
+```bash
+# Apenas análise de rotação
+python main.py meu_deck.txt -r
+
+# Apenas comparação de decks
+python main.py meu_deck.txt -c
+
+# Comparar contra deck específico
+python main.py meu_deck.txt --vs oponente.txt
+
+# Comparar contra múltiplos decks
+python main.py meu_deck.txt --vs lugia.txt --vs charizard.txt
+
+# Ajuda
+python main.py -h
 ```
 
 ## Formato de Deck (PTCGO)
@@ -56,22 +71,29 @@ Pokemon: 18
 4 Charmander MEW 4
 3 Charmeleon OBF 27
 2 Pidgeot ex OBF 164
-2 Pidgey OBF 162
-1 Pidgeotto OBF 163
 
 Trainer: 31
 4 Arven OBF 186
 4 Iono PAL 185
 4 Rare Candy SVI 191
 4 Ultra Ball SVI 196
-4 Nest Ball SVI 181
 
 Energy: 10
 6 Basic Fire Energy SVE 2
 4 Reversal Energy PAL 192
 ```
 
-## Regulation Marks
+## Sobre a Rotação
+
+Em **março de 2026**, todas as cartas com **Regulation Mark G** sairão do formato Standard:
+- Scarlet & Violet (SVI)
+- Paldea Evolved (PAL)
+- Obsidian Flames (OBF)
+- Pokemon 151 (MEW)
+- Paradox Rift (PAR)
+- Paldean Fates (PAF)
+
+### Regulation Marks
 
 | Mark | Status | Sets |
 |------|--------|------|
@@ -81,9 +103,78 @@ Energy: 10
 | **H** | Seguro | TEF, TWM, SFA, SCR, SSP |
 | **I** | Novo | PRE, JTG, ASC |
 
-## Códigos de Sets Suportados
+## Comparação de Decks
 
-### Scarlet & Violet Era
+A análise de matchup considera:
+
+### Cartas em Comum
+Identifica cartas compartilhadas entre os decks e suas quantidades.
+
+### Vantagens de Tipo
+Analisa fraquezas de tipos de Pokemon:
+- Fire > Grass
+- Water > Fire
+- Lightning > Water
+- Fighting > Lightning, Darkness
+- Psychic > Fighting
+- etc.
+
+### Métricas de Análise
+
+| Métrica | Descrição |
+|---------|-----------|
+| **Similaridade** | Porcentagem de cartas em comum |
+| **Velocidade** | Baseado em cartas de busca/setup |
+| **Consistência** | Baseado em draw supporters |
+| **Opções de Ataque** | Quantidade de atacantes principais |
+
+### Exemplo de Comparação
+
+```
+╭──────────────────╮
+│ Deck Comparison  │
+│ Similarity: 8.3% │
+╰──────────────────╯
+
+     Shared Cards (3)
+╭───────────────┬────┬────╮
+│ Card Name     │ A  │ B  │
+├───────────────┼────┼────┤
+│ Boss's Orders │  2 │  2 │
+│ Iono          │  4 │  4 │
+│ Ultra Ball   │  4 │  4 │
+╰───────────────┴────┴────╯
+
+╭─────────────────────────────╮
+│ Matchup Analysis            │
+│ Example Opponent is favored │
+╰─────────────────────────────╯
+```
+
+## Critérios de Substituição
+
+Para rotação, as substituições são calculadas com:
+
+| Critério | Peso | Descrição |
+|----------|------|-----------|
+| **Tipo/Subtipo** | 40% | Pokemon→Pokemon, Supporter→Supporter |
+| **Função** | 40% | Draw, Search, Recovery, Switching |
+| **Arquétipo** | 20% | Compatibilidade de tipo de energia |
+
+### Funções Detectadas
+
+| Categoria | Exemplos |
+|-----------|----------|
+| Draw | Professor's Research, Iono |
+| Search | Ultra Ball, Nest Ball |
+| Recovery | Super Rod, Night Stretcher |
+| Switching | Switch, Escape Rope |
+| Energy Accel | Attachar energia do deck/descarte |
+| Disruption | Iono, Boss's Orders |
+| Setup | Rare Candy, evolução |
+
+## Códigos de Sets
+
 | Código | Set | Regulation |
 |--------|-----|------------|
 | SVI | Scarlet & Violet | G |
@@ -102,57 +193,6 @@ Energy: 10
 | ASC | Ascended Heroes | I |
 | SVE | Basic Energy | Sempre legal |
 
-## Critérios de Substituição
-
-As substituições são calculadas com base em três critérios:
-
-| Critério | Peso | Descrição |
-|----------|------|-----------|
-| **Tipo/Subtipo** | 40% | Pokemon→Pokemon, Supporter→Supporter, etc. |
-| **Função** | 40% | Draw, Search, Recovery, Switching, etc. |
-| **Arquétipo** | 20% | Compatibilidade de tipo de energia |
-
-### Funções Detectadas
-
-| Categoria | Exemplos |
-|-----------|----------|
-| Draw | Professor's Research, Iono |
-| Search | Ultra Ball, Nest Ball |
-| Recovery | Super Rod, Night Stretcher |
-| Switching | Switch, Escape Rope |
-| Energy Accel | Attachar energia do deck/descarte |
-| Damage | Ataques que causam dano |
-| Disruption | Iono, Boss's Orders |
-| Setup | Rare Candy, evolução |
-| Protection | Prevenir dano/efeitos |
-
-## Exemplo de Saída
-
-```
-╭───────────────────── Rotation Analysis ─────────────────────╮
-│ Impact: 89.8% (CRITICAL)                                    │
-│ Rotating (March 2026): 49 cards                             │
-│ Already Illegal: 4 cards                                    │
-│ Safe: 6 cards                                               │
-╰─────────────────────────────────────────────────────────────╯
-
- Already Illegal (Regulation F or earlier)
-╭─────┬───────────────────┬─────────┬─────╮
-│ Qty │ Card Name         │ Set     │ Reg │
-├─────┼───────────────────┼─────────┼─────┤
-│   1 │ Rotom V           │ LOR 177 │ F   │
-│   1 │ Manaphy           │ BRS 41  │ F   │
-╰─────┴───────────────────┴─────────┴─────╯
-
- Rotating March 2026 (Regulation G)
-╭─────┬─────────────────┬─────────┬─────────────────────╮
-│ Qty │ Card Name       │ Set     │ Type                │
-├─────┼─────────────────┼─────────┼─────────────────────┤
-│   4 │ Charizard ex    │ OBF 125 │ Pokemon             │
-│   4 │ Iono            │ PAL 185 │ Trainer (supporter) │
-╰─────┴─────────────────┴─────────┴─────────────────────╯
-```
-
 ## Estrutura do Projeto
 
 ```
@@ -160,12 +200,14 @@ tcg_tool/
 ├── main.py              # CLI principal
 ├── deck_parser.py       # Parser formato PTCGO
 ├── rotation_checker.py  # Análise de rotação
+├── deck_compare.py      # Comparação de decks
 ├── substitution.py      # Lógica de substituição
-├── card_api.py          # Integração TCGdex/Pokemon TCG API
-├── models.py            # Dataclasses (Card, Deck, Substitution)
-├── database.py          # SQLite para cache de cartas
-├── requirements.txt     # Dependências Python
-└── example_deck.txt     # Deck de exemplo
+├── card_api.py          # Integração com APIs
+├── models.py            # Dataclasses
+├── database.py          # SQLite para cache
+├── requirements.txt     # Dependências
+├── example_deck.txt     # Deck de exemplo
+└── example_opponent.txt # Oponente de exemplo
 ```
 
 ## APIs Utilizadas
@@ -178,6 +220,7 @@ tcg_tool/
 - A busca de substituições depende da disponibilidade das cartas na API
 - Sets futuros (como ASC) podem não estar disponíveis até o lançamento
 - A análise de função é baseada em palavras-chave e pode não ser 100% precisa
+- A análise de matchup é simplificada e não considera combos específicos
 
 ## Licença
 
