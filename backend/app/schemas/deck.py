@@ -80,3 +80,34 @@ class DeckImportRequest(BaseModel):
     deck_list: str  # Text format deck list
     name: Optional[str] = None
     format: DeckFormat = DeckFormat.STANDARD
+
+
+class DeckSuggestionRequest(BaseModel):
+    """Schema for requesting deck suggestions for a Pokémon"""
+    pokemon_name: str  # Name of the Pokémon
+    set_code: Optional[str] = None  # Collection/set code (e.g., "sv1", "sv4pt5")
+    format: DeckFormat = DeckFormat.STANDARD
+
+
+class SuggestedDeckInfo(BaseModel):
+    """Schema for a suggested deck's information"""
+    model_config = ConfigDict(from_attributes=True)
+
+    archetype: str
+    meta_rank: Optional[int] = None
+    meta_share: Optional[float] = None
+    win_rate: Optional[float] = None
+    deck_id: Optional[int] = None
+    core_cards: Optional[List[str]] = None
+    matchup_summary: Optional[dict] = None
+    reasoning: str  # Why this deck is suggested
+
+
+class DeckSuggestionResponse(BaseModel):
+    """Schema for deck suggestion results"""
+    pokemon_name: str
+    set_code: Optional[str] = None
+    card_found: bool
+    card_info: Optional[dict] = None  # Basic info about the Pokémon card
+    suggestions: List[SuggestedDeckInfo] = []
+    ai_analysis: Optional[str] = None  # AI-powered analysis of the Pokémon's potential

@@ -10,7 +10,8 @@ from app.models.deck import Deck, DeckCard, DeckFormat
 from app.models.card import Card, CardType
 from app.schemas.deck import (
     DeckCreate, DeckRead, DeckUpdate, DeckListRead,
-    DeckCardCreate, DeckImportRequest
+    DeckCardCreate, DeckImportRequest,
+    DeckSuggestionRequest, DeckSuggestionResponse
 )
 
 router = APIRouter()
@@ -181,6 +182,72 @@ async def import_deck_from_file(
         format=format
     )
     return DeckRead.model_validate(deck)
+
+
+@router.post("/suggest", response_model=DeckSuggestionResponse)
+async def suggest_deck_for_pokemon(
+    request: DeckSuggestionRequest,
+    language: str = Query("en", description="Language for card search"),
+    db: AsyncSession = Depends(get_db)
+):
+    """Suggest the best deck for a given Pokémon from a specific collection.
+
+    This endpoint takes a Pokémon name and optionally a set/collection code,
+    then analyzes the current meta and available decks to suggest the best
+    deck archetypes for that Pokémon.
+
+    Args:
+        request: The deck suggestion request containing:
+            - pokemon_name: Name of the Pokémon (e.g., "Charizard ex", "Pikachu")
+            - set_code: Optional set code (e.g., "sv1", "SVI", "PAF")
+            - format: Deck format (STANDARD, EXPANDED, UNLIMITED)
+        language: Language for card search (default: "en")
+
+    Returns:
+        DeckSuggestionResponse with:
+            - Card information if found
+            - List of suggested deck archetypes ranked by meta relevance
+            - AI-powered analysis of the Pokémon's competitive potential
+    """
+    from app.services.deck_suggestion import DeckSuggestionService
+
+    suggestion_service = DeckSuggestionService(db, language)
+    result = await suggestion_service.suggest_deck(request)
+    return result
+
+
+@router.get("/suggest/{pokemon_name}", response_model=DeckSuggestionResponse)
+async def suggest_deck_for_pokemon_get(
+    pokemon_name: str,
+    set_code: Optional[str] = Query(None, description="Collection/set code (e.g., sv1, SVI, PAF)"),
+    format: DeckFormat = Query(DeckFormat.STANDARD, description="Deck format"),
+    language: str = Query("en", description="Language for card search"),
+    db: AsyncSession = Depends(get_db)
+):
+    """Suggest the best deck for a given Pokémon (GET method).
+
+    This is a convenience endpoint that accepts parameters via URL path and query strings.
+
+    Args:
+        pokemon_name: Name of the Pokémon (e.g., "Charizard ex", "Pikachu")
+        set_code: Optional set code (e.g., "sv1", "SVI", "PAF")
+        format: Deck format (STANDARD, EXPANDED, UNLIMITED)
+        language: Language for card search (default: "en")
+
+    Returns:
+        DeckSuggestionResponse with deck suggestions for the Pokémon
+    """
+    from app.services.deck_suggestion import DeckSuggestionService
+
+    request = DeckSuggestionRequest(
+        pokemon_name=pokemon_name,
+        set_code=set_code,
+        format=format
+    )
+
+    suggestion_service = DeckSuggestionService(db, language)
+    result = await suggestion_service.suggest_deck(request)
+    return result
 
 
 async def _add_cards_to_deck(
