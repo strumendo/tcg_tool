@@ -17,6 +17,7 @@ from deck_parser import parse_deck
 from rotation_checker import analyze_rotation, get_rotation_summary
 from substitution import find_substitutions, generate_updated_deck
 from deck_compare import compare_decks, analyze_matchup, get_main_attackers
+from deck_suggest import find_pokemon_cards, get_pokemon_collections, suggest_deck_for_pokemon, get_legal_status
 from models import CardType
 
 
@@ -40,6 +41,7 @@ def print_menu():
     console.print("  [cyan]1[/cyan] - Analyze rotation (March 2026)")
     console.print("  [cyan]2[/cyan] - Compare decks (matchup analysis)")
     console.print("  [cyan]3[/cyan] - Both (rotation + comparison)")
+    console.print("  [cyan]4[/cyan] - Suggest deck for a Pokemon")
     console.print("  [cyan]q[/cyan] - Quit")
     console.print()
 
@@ -303,6 +305,174 @@ def print_updated_deck(updated_cards):
         console.print(f"[yellow]Warning: Deck has {missing} cards missing. Consider adding more cards.[/yellow]")
 
 
+def print_pokemon_collections(pokemon_name: str, collections: list[dict]):
+    """Print collections where a Pokemon appears."""
+    if not collections:
+        console.print(f"[yellow]No cards found for '{pokemon_name}'.[/yellow]")
+        return
+
+    console.print(Panel.fit(
+        f"[bold cyan]Collections for {pokemon_name}[/bold cyan]",
+        border_style="cyan"
+    ))
+    console.print()
+
+    table = Table(title="Available Sets", box=box.ROUNDED)
+    table.add_column("Set Code", style="cyan")
+    table.add_column("Set Name", style="white")
+    table.add_column("Cards", justify="right", style="green")
+    table.add_column("Regulation", style="yellow")
+    table.add_column("Status", style="dim")
+
+    for collection in collections:
+        reg_mark = collection.get("regulation_mark", "")
+        status = get_legal_status(reg_mark)
+
+        # Color status
+        if "Illegal" in status:
+            status = f"[red]{status}[/red]"
+        elif "Rotating" in status:
+            status = f"[yellow]{status}[/yellow]"
+        elif "Legal" in status:
+            status = f"[green]{status}[/green]"
+
+        table.add_row(
+            collection.get("set_code", "?"),
+            collection.get("set_name", "Unknown"),
+            str(len(collection.get("cards", []))),
+            reg_mark or "?",
+            status,
+        )
+
+    console.print(table)
+    console.print()
+
+    # Show card variants
+    console.print("[bold]Card Variants:[/bold]")
+    for collection in collections:
+        for card in collection.get("cards", []):
+            variant_tags = []
+            if card.get("is_ex"):
+                variant_tags.append("[magenta]ex[/magenta]")
+            if card.get("is_v"):
+                variant_tags.append("[cyan]V[/cyan]")
+            if card.get("is_vstar"):
+                variant_tags.append("[yellow]VSTAR[/yellow]")
+            if card.get("is_vmax"):
+                variant_tags.append("[red]VMAX[/red]")
+
+            hp_str = f"HP {card.get('hp')}" if card.get('hp') else ""
+            types_str = "/".join(card.get("types", [])) if card.get("types") else ""
+            tags_str = " ".join(variant_tags) if variant_tags else ""
+
+            console.print(f"  • {card.get('name')} ({collection.get('set_code')} {card.get('number')}) {tags_str} {types_str} {hp_str}")
+    console.print()
+
+
+def print_deck_suggestions(pokemon_name: str, suggestions):
+    """Print deck suggestions for a Pokemon."""
+    if not suggestions:
+        console.print(f"[yellow]No deck suggestions available for '{pokemon_name}'.[/yellow]")
+        return
+
+    console.print(Panel.fit(
+        f"[bold green]Deck Suggestions for {pokemon_name}[/bold green]",
+        border_style="green"
+    ))
+    console.print()
+
+    for i, suggestion in enumerate(suggestions, 1):
+        # Difficulty color
+        diff_colors = {
+            "Beginner": "green",
+            "Intermediate": "yellow",
+            "Advanced": "red",
+        }
+        diff_color = diff_colors.get(suggestion.difficulty, "white")
+
+        console.print(Panel(
+            f"[bold]{suggestion.archetype_name}[/bold]\n"
+            f"[dim]{suggestion.description}[/dim]\n\n"
+            f"[cyan]Difficulty:[/cyan] [{diff_color}]{suggestion.difficulty}[/{diff_color}]",
+            title=f"[bold]Suggestion #{i}[/bold]",
+            border_style="cyan"
+        ))
+
+        # Pokemon info
+        pokemon = suggestion.pokemon
+        console.print(f"[bold]Main Attacker:[/bold] {pokemon.name}")
+        console.print(f"  Set: {pokemon.set_code} {pokemon.number}")
+        console.print(f"  Regulation: {pokemon.regulation_mark} ({get_legal_status(pokemon.regulation_mark)})")
+        if pokemon.hp:
+            console.print(f"  HP: {pokemon.hp}")
+        if pokemon.types:
+            console.print(f"  Type: {'/'.join(pokemon.types)}")
+        console.print()
+
+        # Strategy
+        console.print(f"[bold cyan]Strategy:[/bold cyan] {suggestion.strategy}")
+        console.print()
+
+        # Key cards table
+        table = Table(title="[bold]Key Cards[/bold]", box=box.ROUNDED, show_header=False)
+        table.add_column("Card", style="white")
+
+        for card in suggestion.key_cards[:12]:  # Limit display
+            table.add_row(card)
+
+        console.print(table)
+        console.print()
+
+        # Energy
+        console.print("[bold cyan]Energy:[/bold cyan]")
+        for energy in suggestion.energy_types:
+            console.print(f"  • {energy}")
+        console.print()
+
+        # Strengths and Weaknesses side by side
+        str_weak_table = Table(box=box.ROUNDED, show_header=True)
+        str_weak_table.add_column("Strengths", style="green")
+        str_weak_table.add_column("Weaknesses", style="red")
+
+        max_len = max(len(suggestion.strengths), len(suggestion.weaknesses))
+        for j in range(max_len):
+            strength = suggestion.strengths[j] if j < len(suggestion.strengths) else ""
+            weakness = suggestion.weaknesses[j] if j < len(suggestion.weaknesses) else ""
+            str_weak_table.add_row(strength, weakness)
+
+        console.print(str_weak_table)
+        console.print()
+
+
+def run_deck_suggestion():
+    """Run deck suggestion mode."""
+    console.print()
+    pokemon_name = Prompt.ask("[bold]Enter Pokemon name[/bold]")
+
+    if not pokemon_name.strip():
+        console.print("[yellow]No Pokemon name provided.[/yellow]")
+        return
+
+    # Search for Pokemon
+    with console.status(f"[bold cyan]Searching for {pokemon_name}...[/bold cyan]"):
+        collections = get_pokemon_collections(pokemon_name)
+
+    if not collections:
+        console.print(f"[red]No Pokemon found matching '{pokemon_name}'.[/red]")
+        console.print("[dim]Try using the full name (e.g., 'Charizard' instead of 'Char').[/dim]")
+        return
+
+    # Show collections
+    print_pokemon_collections(pokemon_name, collections)
+
+    # Ask if user wants deck suggestions
+    if Confirm.ask("[cyan]Would you like deck suggestions for this Pokemon?[/cyan]", default=True):
+        with console.status("[bold cyan]Generating deck suggestions...[/bold cyan]"):
+            suggestions = suggest_deck_for_pokemon(pokemon_name)
+
+        print_deck_suggestions(pokemon_name, suggestions)
+
+
 def get_deck_input(prompt_text: str = "Enter your deck") -> str:
     """Get deck input from user."""
     console.print(f"[bold]{prompt_text} (PTCGO format):[/bold]")
@@ -465,6 +635,7 @@ def main():
     deck_file = None
     compare_files = []
     mode = None
+    pokemon_name = None
 
     args = sys.argv[1:]
     i = 0
@@ -474,29 +645,63 @@ def main():
             mode = "rotation"
         elif arg in ["-c", "--compare"]:
             mode = "compare"
+        elif arg in ["-s", "--suggest"]:
+            mode = "suggest"
+            if i + 1 < len(args) and not args[i + 1].startswith("-"):
+                i += 1
+                pokemon_name = args[i]
         elif arg in ["-h", "--help"]:
             console.print("[bold]Usage:[/bold]")
             console.print("  python main.py [deck.txt] [options]")
             console.print()
             console.print("[bold]Options:[/bold]")
-            console.print("  -r, --rotation     Run rotation analysis only")
-            console.print("  -c, --compare      Run deck comparison only")
-            console.print("  --vs <deck.txt>    Compare against specific deck(s)")
-            console.print("  -h, --help         Show this help")
+            console.print("  -r, --rotation          Run rotation analysis only")
+            console.print("  -c, --compare           Run deck comparison only")
+            console.print("  -s, --suggest [name]    Suggest deck for a Pokemon")
+            console.print("  --vs <deck.txt>         Compare against specific deck(s)")
+            console.print("  -h, --help              Show this help")
             console.print()
             console.print("[bold]Examples:[/bold]")
-            console.print("  python main.py                          # Interactive mode")
-            console.print("  python main.py my_deck.txt              # Analyze deck from file")
-            console.print("  python main.py my_deck.txt -c           # Compare mode")
-            console.print("  python main.py my_deck.txt --vs opp.txt # Compare against specific deck")
+            console.print("  python main.py                              # Interactive mode")
+            console.print("  python main.py my_deck.txt                  # Analyze deck from file")
+            console.print("  python main.py my_deck.txt -c               # Compare mode")
+            console.print("  python main.py my_deck.txt --vs opp.txt     # Compare against specific deck")
+            console.print("  python main.py -s Charizard                 # Suggest deck for Charizard")
+            console.print("  python main.py --suggest \"Pikachu ex\"       # Suggest deck for Pikachu ex")
             return
         elif arg == "--vs":
             if i + 1 < len(args):
                 i += 1
                 compare_files.append(args[i])
         elif not arg.startswith("-"):
-            deck_file = arg
+            if mode == "suggest" and not pokemon_name:
+                pokemon_name = arg
+            else:
+                deck_file = arg
         i += 1
+
+    # Handle suggest mode from command line
+    if mode == "suggest":
+        if pokemon_name:
+            with console.status(f"[bold cyan]Searching for {pokemon_name}...[/bold cyan]"):
+                collections = get_pokemon_collections(pokemon_name)
+
+            if not collections:
+                console.print(f"[red]No Pokemon found matching '{pokemon_name}'.[/red]")
+                sys.exit(1)
+
+            print_pokemon_collections(pokemon_name, collections)
+
+            with console.status("[bold cyan]Generating deck suggestions...[/bold cyan]"):
+                suggestions = suggest_deck_for_pokemon(pokemon_name)
+
+            print_deck_suggestions(pokemon_name, suggestions)
+        else:
+            run_deck_suggestion()
+
+        console.print()
+        console.print("[dim]Thank you for using TCG Rotation Checker![/dim]")
+        return
 
     # Load main deck
     if deck_file:
@@ -507,7 +712,7 @@ def main():
     else:
         # Interactive menu
         print_menu()
-        choice = Prompt.ask("Select option", choices=["1", "2", "3", "q"], default="1")
+        choice = Prompt.ask("Select option", choices=["1", "2", "3", "4", "q"], default="1")
 
         if choice == "q":
             console.print("[dim]Goodbye![/dim]")
@@ -517,6 +722,11 @@ def main():
             mode = "rotation"
         elif choice == "2":
             mode = "compare"
+        elif choice == "4":
+            run_deck_suggestion()
+            console.print()
+            console.print("[dim]Thank you for using TCG Rotation Checker![/dim]")
+            return
         else:
             mode = "both"
 

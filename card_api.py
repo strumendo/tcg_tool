@@ -268,3 +268,96 @@ def get_new_set_cards(set_code: str = "ASC") -> list[Card]:
                 cards.append(card)
 
     return cards
+
+
+def search_pokemon_by_name(name: str) -> list[dict]:
+    """Search for Pokemon cards by name using TCGdex API."""
+    results = []
+
+    # Try Pokemon TCG API first (has more complete data)
+    try:
+        url = f"{POKEMONTCG_BASE}/cards"
+        params = {"q": f"name:{name}*", "pageSize": 50}
+        with httpx.Client(timeout=15) as client:
+            response = client.get(url, params=params)
+            if response.status_code == 200:
+                data = response.json()
+                api_results = data.get("data", [])
+                for card in api_results:
+                    results.append({
+                        "id": card.get("id", ""),
+                        "name": card.get("name", ""),
+                        "set": card.get("set", {}).get("name", ""),
+                        "set_code": card.get("set", {}).get("id", "").upper(),
+                        "number": card.get("number", ""),
+                        "regulationMark": card.get("regulationMark", ""),
+                        "types": card.get("types", []),
+                        "hp": card.get("hp", ""),
+                        "subtypes": card.get("subtypes", []),
+                        "supertype": card.get("supertype", ""),
+                        "attacks": card.get("attacks", []),
+                        "abilities": card.get("abilities", []),
+                        "source": "pokemontcg"
+                    })
+    except Exception:
+        pass
+
+    # If no results, try TCGdex API with detail fetching
+    if not results:
+        try:
+            url = f"{TCGDEX_BASE}/cards"
+            params = {"name": name}
+            with httpx.Client(timeout=30) as client:
+                response = client.get(url, params=params)
+                if response.status_code == 200:
+                    data = response.json()
+                    if isinstance(data, list):
+                        # Limit to first 30 cards to avoid too many API calls
+                        for card_summary in data[:30]:
+                            card_id = card_summary.get("id", "")
+                            if card_id:
+                                # Fetch full card details
+                                detail = fetch_card_tcgdex_by_id(card_id)
+                                if detail:
+                                    # Extract set code from id (e.g., "obf-125" -> "OBF")
+                                    set_code = card_id.split("-")[0].upper() if "-" in card_id else ""
+                                    results.append({
+                                        "id": card_id,
+                                        "name": detail.get("name", card_summary.get("name", "")),
+                                        "set": detail.get("set", {}).get("name", "") if isinstance(detail.get("set"), dict) else "",
+                                        "set_code": set_code,
+                                        "number": str(detail.get("localId", "")),
+                                        "regulationMark": detail.get("regulationMark", ""),
+                                        "types": detail.get("types", []),
+                                        "hp": detail.get("hp", ""),
+                                        "subtypes": [detail.get("stage", "")] if detail.get("stage") else [],
+                                        "supertype": detail.get("category", ""),
+                                        "attacks": detail.get("attacks", []),
+                                        "abilities": detail.get("abilities", []),
+                                        "source": "tcgdex"
+                                    })
+        except Exception:
+            pass
+
+    return results
+
+
+def get_pokemon_details(card_id: str) -> Optional[dict]:
+    """Get detailed information about a Pokemon card."""
+    # Try TCGdex first
+    detail = fetch_card_tcgdex_by_id(card_id)
+    if detail:
+        return detail
+
+    # Try Pokemon TCG API
+    try:
+        url = f"{POKEMONTCG_BASE}/cards/{card_id}"
+        with httpx.Client(timeout=30) as client:
+            response = client.get(url)
+            if response.status_code == 200:
+                data = response.json()
+                return data.get("data", {})
+    except Exception:
+        pass
+
+    return None
