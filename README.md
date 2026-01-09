@@ -17,6 +17,13 @@ Ferramenta CLI para analisar decks de Pokemon TCG, verificar o impacto da rotaç
 - Suporta comparação contra múltiplos decks
 - Gera resumo de matchups
 
+### 3. Sugestão de Deck por Pokemon
+- Busca um Pokemon pelo nome
+- Identifica em quais coleções/sets o Pokemon aparece
+- Mostra status de legalidade (Legal, Rotacionando, Ilegal)
+- Sugere arquétipos de deck baseados no tipo do Pokemon
+- Inclui lista de cartas-chave, estratégia, forças e fraquezas
+
 ## Instalação
 
 ### Com ambiente virtual (recomendado)
@@ -51,10 +58,11 @@ pip install -r requirements.txt
 python main.py
 ```
 
-Exibe um menu com 3 opções:
+Exibe um menu com 4 opções:
 1. Análise de rotação
 2. Comparação de decks
 3. Ambos
+4. Sugestão de deck por Pokemon
 
 ### Com Arquivo
 ```bash
@@ -67,6 +75,7 @@ python main.py meu_deck.txt
 |-------|-----------|
 | `-r`, `--rotation` | Apenas análise de rotação |
 | `-c`, `--compare` | Apenas comparação de decks |
+| `-s`, `--suggest [nome]` | Sugestão de deck para um Pokemon |
 | `--vs <arquivo>` | Comparar contra deck específico |
 | `-h`, `--help` | Exibir ajuda |
 
@@ -90,6 +99,12 @@ python main.py meu_deck.txt --vs oponente.txt
 
 # Comparar contra múltiplos decks
 python main.py meu_deck.txt --vs lugia.txt --vs charizard.txt --vs regidrago.txt
+
+# Sugerir deck para um Pokemon
+python main.py -s Charizard
+
+# Sugerir deck para Pokemon com nome composto
+python main.py --suggest "Pikachu ex"
 ```
 
 ## Formato de Deck (PTCGO)
@@ -271,6 +286,105 @@ Quando você compara contra vários decks:
 ╰────────────────────┴────────────┴───────────╯
 ```
 
+## Sugestão de Deck
+
+A funcionalidade de sugestão de deck permite buscar um Pokemon e receber sugestões de decks competitivos.
+
+### Como Funciona
+
+1. **Busca do Pokemon**: O sistema busca o Pokemon nas APIs (TCGdex e Pokemon TCG API)
+2. **Identificação de Coleções**: Mostra em quais sets o Pokemon aparece
+3. **Análise de Legalidade**: Indica se o Pokemon está legal, rotacionando ou já rotacionou
+4. **Sugestões de Deck**: Gera arquétipos de deck baseados nas características do Pokemon
+
+### Exemplo de Saída
+
+```
+╭─────────────────────────────╮
+│ Collections for Charizard   │
+╰─────────────────────────────╯
+
+              Available Sets
+╭──────────┬────────────────────┬───────┬────────────┬─────────────────────╮
+│ Set Code │ Set Name           │ Cards │ Regulation │ Status              │
+├──────────┼────────────────────┼───────┼────────────┼─────────────────────┤
+│ OBF      │ Obsidian Flames    │     3 │ G          │ Rotating March 2026 │
+│ MEW      │ Pokemon 151        │     2 │ G          │ Rotating March 2026 │
+│ PAF      │ Paldean Fates      │     1 │ G          │ Rotating March 2026 │
+╰──────────┴────────────────────┴───────┴────────────┴─────────────────────╯
+
+Card Variants:
+  • Charizard ex (OBF 125) ex Fire HP 330
+  • Charizard (OBF 26) Fire HP 170
+  • Charizard ex (MEW 6) ex Fire HP 330
+
+╭─────────────────────────────────────╮
+│ Deck Suggestions for Charizard      │
+╰─────────────────────────────────────╯
+
+╭─────────────── Suggestion #1 ────────────────╮
+│ Charizard ex / Arcanine                      │
+│ A Fire-type deck featuring Charizard ex      │
+│                                              │
+│ Difficulty: Beginner                         │
+╰──────────────────────────────────────────────╯
+
+Main Attacker: Charizard ex
+  Set: OBF 125
+  Regulation: G (Rotating March 2026)
+  HP: 330
+  Type: Fire
+
+Strategy: Aggressive damage with Fire-type acceleration
+
+         Key Cards
+╭───────────────────────╮
+│ 4 Charizard ex        │
+│ 4 Charizard (Basic)   │
+│ 4 Rare Candy          │
+│ 4 Ultra Ball          │
+│ 4 Nest Ball           │
+│ 4 Iono                │
+│ 4 Arven               │
+│ 2 Boss's Orders       │
+│ 2-4 Magma Basin       │
+╰───────────────────────╯
+
+Energy:
+  • Basic Fire Energy
+
+╭───────────────────────────────┬─────────────────────────────────╮
+│ Strengths                     │ Weaknesses                      │
+├───────────────────────────────┼─────────────────────────────────┤
+│ Strong against Grass/Metal    │ Weak to Water                   │
+│ Good energy acceleration      │ Energy intensive                │
+│ High HP (330)                 │ Gives 2 prize cards when KO'd   │
+╰───────────────────────────────┴─────────────────────────────────╯
+```
+
+### Tipos de Pokemon Suportados
+
+| Tipo | Parceiros Comuns | Estratégia |
+|------|------------------|------------|
+| Fire | Arcanine, Entei, Magcargo | Aceleração de energia agressiva |
+| Water | Palkia, Kyogre, Greninja | Controle e sinergias Water |
+| Lightning | Pikachu, Miraidon, Regieleki | Aceleração rápida de energia |
+| Psychic | Gardevoir, Mewtwo, Mew | Manipulação de energia Psychic |
+| Fighting | Lucario, Machamp, Buzzwole | Dano alto com bônus Fighting |
+| Darkness | Darkrai, Zoroark, Umbreon | Aceleração Dark e controle |
+| Metal | Dialga, Metagross, Archaludon | Pokemon tanques com recuperação |
+| Dragon | Rayquaza, Dragonite, Regidrago | Dano alto com energia multi-tipo |
+| Grass | Sceptile, Venusaur, Decidueye | Cura e eficiência de energia |
+| Colorless | Lugia, Pidgeot, Archeops | Flexível com qualquer energia |
+
+### Níveis de Dificuldade
+
+| Nível | Descrição |
+|-------|-----------|
+| **Beginner** | Decks ex/V simples, fáceis de jogar |
+| **Intermediate** | Decks VSTAR/VMAX com VSTAR Powers |
+| **Advanced** | Decks Stage 2, combos complexos |
+
 ## Critérios de Substituição
 
 Para rotação, as substituições são calculadas com três critérios:
@@ -334,6 +448,7 @@ tcg_tool/
 ├── deck_parser.py       # Parser formato PTCGO
 ├── rotation_checker.py  # Análise de rotação
 ├── deck_compare.py      # Comparação de decks e matchups
+├── deck_suggest.py      # Sugestão de deck por Pokemon
 ├── substitution.py      # Lógica de substituição
 ├── card_api.py          # Integração TCGdex/Pokemon TCG API
 ├── models.py            # Dataclasses (Card, Deck, Substitution)
