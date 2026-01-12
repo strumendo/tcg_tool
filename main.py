@@ -17,8 +17,20 @@ from deck_parser import parse_deck
 from rotation_checker import analyze_rotation, get_rotation_summary
 from substitution import find_substitutions, generate_updated_deck
 from deck_compare import compare_decks, analyze_matchup, get_main_attackers
-from deck_suggest import find_pokemon_cards, get_pokemon_collections, suggest_deck_for_pokemon, get_legal_status
+from deck_suggest import (
+    find_pokemon_cards, get_pokemon_collections, suggest_deck_for_pokemon, get_legal_status,
+    suggest_meta_deck_for_pokemon, get_top_meta_decks, get_deck_counter,
+    format_deck_suggestion_bilingual, MetaDeckSuggestion
+)
+from meta_database import (
+    META_DECKS, Language, get_matchup, get_deck_matchups,
+    get_tier_list, get_translation, get_difficulty_translation
+)
 from models import CardType
+
+
+# Current language setting
+CURRENT_LANGUAGE = Language.EN
 
 
 console = Console()
@@ -37,11 +49,17 @@ def print_header():
 
 def print_menu():
     """Print main menu options."""
+    global CURRENT_LANGUAGE
+    lang_label = "PT" if CURRENT_LANGUAGE == Language.PT else "EN"
+
     console.print("[bold]Choose an option:[/bold]")
     console.print("  [cyan]1[/cyan] - Analyze rotation (March 2026)")
     console.print("  [cyan]2[/cyan] - Compare decks (matchup analysis)")
     console.print("  [cyan]3[/cyan] - Both (rotation + comparison)")
     console.print("  [cyan]4[/cyan] - Suggest deck for a Pokemon")
+    console.print("  [cyan]5[/cyan] - Browse Meta Decks (Top 8)")
+    console.print("  [cyan]6[/cyan] - View Meta Matchups")
+    console.print(f"  [cyan]L[/cyan] - Toggle Language (Current: [yellow]{lang_label}[/yellow])")
     console.print("  [cyan]q[/cyan] - Quit")
     console.print()
 
@@ -444,29 +462,346 @@ def print_deck_suggestions(pokemon_name: str, suggestions):
         console.print()
 
 
-def run_deck_suggestion():
-    """Run deck suggestion mode."""
-    console.print()
-    pokemon_name = Prompt.ask("[bold]Enter Pokemon name[/bold]")
+def print_meta_deck_detail(suggestion: MetaDeckSuggestion, lang: Language = Language.EN):
+    """Print detailed meta deck information."""
+    deck = suggestion.deck
+    formatted = format_deck_suggestion_bilingual(suggestion, lang)
 
-    if not pokemon_name.strip():
-        console.print("[yellow]No Pokemon name provided.[/yellow]")
+    # Difficulty color
+    diff_colors = {
+        "Beginner": "green", "Iniciante": "green",
+        "Intermediate": "yellow", "Intermediario": "yellow",
+        "Advanced": "red", "Avancado": "red",
+    }
+    diff_color = diff_colors.get(formatted["difficulty"], "white")
+
+    # Header
+    tier_label = get_translation("tier", lang)
+    meta_label = get_translation("meta_share", lang)
+
+    console.print(Panel(
+        f"[bold]{formatted['name']}[/bold]\n"
+        f"[dim]{formatted['description']}[/dim]\n\n"
+        f"[cyan]{tier_label}:[/cyan] {deck.tier}  |  "
+        f"[cyan]{meta_label}:[/cyan] {formatted['meta_share']}  |  "
+        f"[cyan]{get_translation('difficulty', lang)}:[/cyan] [{diff_color}]{formatted['difficulty']}[/{diff_color}]",
+        border_style="cyan"
+    ))
+
+    # Strategy
+    console.print(f"\n[bold cyan]{get_translation('strategy', lang)}:[/bold cyan]")
+    console.print(f"  {formatted['strategy']}")
+    console.print()
+
+    # Key Pokemon
+    console.print(f"[bold cyan]{get_translation('key_pokemon', lang)}:[/bold cyan] {', '.join(deck.key_pokemon)}")
+    console.print(f"[bold cyan]Energy:[/bold cyan] {', '.join(deck.energy_types)}")
+    console.print()
+
+    # Strengths and Weaknesses
+    str_weak_table = Table(box=box.ROUNDED, show_header=True)
+    str_weak_table.add_column(get_translation("strengths", lang), style="green")
+    str_weak_table.add_column(get_translation("weaknesses", lang), style="red")
+
+    max_len = max(len(formatted["strengths"]), len(formatted["weaknesses"]))
+    for j in range(max_len):
+        strength = formatted["strengths"][j] if j < len(formatted["strengths"]) else ""
+        weakness = formatted["weaknesses"][j] if j < len(formatted["weaknesses"]) else ""
+        str_weak_table.add_row(strength, weakness)
+
+    console.print(str_weak_table)
+    console.print()
+
+    # Matchups
+    if formatted["matchups"]:
+        console.print(f"[bold cyan]{get_translation('matchups', lang)}:[/bold cyan]")
+        matchup_table = Table(box=box.ROUNDED)
+        matchup_table.add_column("vs", style="white")
+        matchup_table.add_column(get_translation("win_rate", lang), justify="right", style="cyan")
+        matchup_table.add_column("", style="dim")
+        matchup_table.add_column(get_translation("notes", lang), style="dim")
+
+        for opp_name, win_rate, notes in formatted["matchups"]:
+            if win_rate >= 55:
+                rate_color = "green"
+                status = f"[green]{get_translation('favored', lang)}[/green]"
+            elif win_rate <= 45:
+                rate_color = "red"
+                status = f"[red]{get_translation('unfavored', lang)}[/red]"
+            else:
+                rate_color = "yellow"
+                status = f"[yellow]{get_translation('even', lang)}[/yellow]"
+
+            matchup_table.add_row(opp_name, f"[{rate_color}]{win_rate:.0f}%[/{rate_color}]", status, notes[:50])
+
+        console.print(matchup_table)
+        console.print()
+
+
+def print_meta_deck_list(suggestion: MetaDeckSuggestion, lang: Language = Language.EN):
+    """Print the complete deck list for a meta deck."""
+    deck = suggestion.deck
+
+    console.print(Panel.fit(
+        f"[bold green]{get_translation('deck_list', lang)} - {deck.get_name(lang)}[/bold green]",
+        border_style="green"
+    ))
+    console.print()
+
+    # Pokemon
+    pokemon = deck.get_pokemon()
+    if pokemon:
+        console.print(f"[bold cyan]{get_translation('pokemon', lang)} ({sum(c.quantity for c in pokemon)}):[/bold cyan]")
+        for card in pokemon:
+            console.print(f"  {card.quantity} {card.get_name(lang)} {card.set_code} {card.set_number}")
+        console.print()
+
+    # Trainers
+    trainers = deck.get_trainers()
+    if trainers:
+        console.print(f"[bold cyan]{get_translation('trainer', lang)} ({sum(c.quantity for c in trainers)}):[/bold cyan]")
+        for card in trainers:
+            console.print(f"  {card.quantity} {card.get_name(lang)} {card.set_code} {card.set_number}")
+        console.print()
+
+    # Energy
+    energy = deck.get_energy()
+    if energy:
+        console.print(f"[bold cyan]{get_translation('energy', lang)} ({sum(c.quantity for c in energy)}):[/bold cyan]")
+        for card in energy:
+            console.print(f"  {card.quantity} {card.get_name(lang)} {card.set_code} {card.set_number}")
+        console.print()
+
+    console.print(f"[bold]{get_translation('total', lang)}: {deck.total_cards()}[/bold]")
+    console.print()
+
+
+def run_browse_meta_decks():
+    """Browse the top 8 meta decks."""
+    global CURRENT_LANGUAGE
+
+    console.print()
+    console.print(Panel.fit(
+        "[bold cyan]Top 8 Meta Decks - January 2026[/bold cyan]" if CURRENT_LANGUAGE == Language.EN
+        else "[bold cyan]Top 8 Decks do Meta - Janeiro 2026[/bold cyan]",
+        border_style="cyan"
+    ))
+    console.print()
+
+    # Get top decks
+    top_decks = get_top_meta_decks(8, CURRENT_LANGUAGE)
+
+    # Display tier list
+    table = Table(title="Meta Tier List", box=box.ROUNDED)
+    table.add_column("#", justify="right", style="dim")
+    table.add_column("Deck", style="cyan")
+    table.add_column(get_translation("tier", CURRENT_LANGUAGE), justify="center", style="yellow")
+    table.add_column(get_translation("meta_share", CURRENT_LANGUAGE), justify="right", style="green")
+    table.add_column(get_translation("difficulty", CURRENT_LANGUAGE), style="white")
+
+    for i, suggestion in enumerate(top_decks, 1):
+        deck = suggestion.deck
+        tier_style = "green" if deck.tier == 1 else "yellow" if deck.tier == 2 else "white"
+
+        diff = get_difficulty_translation(deck.difficulty, CURRENT_LANGUAGE)
+        diff_color = "green" if "Beginner" in deck.difficulty else "yellow" if "Intermediate" in deck.difficulty else "red"
+
+        table.add_row(
+            str(i),
+            deck.get_name(CURRENT_LANGUAGE),
+            f"[{tier_style}]{deck.tier}[/{tier_style}]",
+            f"{deck.meta_share:.1f}%",
+            f"[{diff_color}]{diff}[/{diff_color}]"
+        )
+
+    console.print(table)
+    console.print()
+
+    # Ask which deck to view
+    prompt_text = "Enter deck number to view details (or 'q' to go back)" if CURRENT_LANGUAGE == Language.EN else "Digite o numero do deck para ver detalhes (ou 'q' para voltar)"
+    choice = Prompt.ask(prompt_text, default="q")
+
+    if choice.lower() == "q":
         return
 
-    # Search for Pokemon
+    try:
+        deck_idx = int(choice) - 1
+        if 0 <= deck_idx < len(top_decks):
+            suggestion = top_decks[deck_idx]
+            console.print()
+            print_meta_deck_detail(suggestion, CURRENT_LANGUAGE)
+
+            # Ask to show full deck list
+            show_list_prompt = "Show complete deck list?" if CURRENT_LANGUAGE == Language.EN else "Mostrar lista completa do deck?"
+            if Confirm.ask(f"[cyan]{show_list_prompt}[/cyan]", default=True):
+                print_meta_deck_list(suggestion, CURRENT_LANGUAGE)
+
+            # Ask about counter
+            counter_prompt = "Find best counter deck?" if CURRENT_LANGUAGE == Language.EN else "Encontrar melhor deck counter?"
+            if Confirm.ask(f"[cyan]{counter_prompt}[/cyan]", default=False):
+                counter = get_deck_counter(suggestion.deck.id, CURRENT_LANGUAGE)
+                if counter:
+                    console.print()
+                    counter_label = "Best Counter" if CURRENT_LANGUAGE == Language.EN else "Melhor Counter"
+                    console.print(f"[bold green]{counter_label}: {counter.deck.get_name(CURRENT_LANGUAGE)}[/bold green]")
+                    print_meta_deck_detail(counter, CURRENT_LANGUAGE)
+        else:
+            console.print("[yellow]Invalid selection.[/yellow]")
+    except ValueError:
+        console.print("[yellow]Invalid input.[/yellow]")
+
+
+def run_view_matchups():
+    """View matchup chart between meta decks."""
+    global CURRENT_LANGUAGE
+
+    console.print()
+    title = "Meta Matchup Chart" if CURRENT_LANGUAGE == Language.EN else "Tabela de Confrontos do Meta"
+    console.print(Panel.fit(f"[bold cyan]{title}[/bold cyan]", border_style="cyan"))
+    console.print()
+
+    # Create matchup matrix table
+    decks = list(META_DECKS.values())[:8]  # Top 8
+
+    # Header
+    table = Table(box=box.ROUNDED, show_header=True)
+    table.add_column("", style="cyan")  # Row headers
+
+    # Add column for each deck (abbreviated)
+    for deck in decks:
+        name = deck.get_name(CURRENT_LANGUAGE)
+        short_name = name[:12] + ".." if len(name) > 14 else name
+        table.add_column(short_name, justify="center", style="white")
+
+    # Add rows
+    for row_deck in decks:
+        row_name = row_deck.get_name(CURRENT_LANGUAGE)
+        short_row = row_name[:12] + ".." if len(row_name) > 14 else row_name
+
+        row_values = [f"[cyan]{short_row}[/cyan]"]
+
+        for col_deck in decks:
+            if row_deck.id == col_deck.id:
+                row_values.append("[dim]-[/dim]")
+            else:
+                matchup = get_matchup(row_deck.id, col_deck.id)
+                if matchup:
+                    win_rate = matchup.win_rate_a
+                    if win_rate >= 55:
+                        row_values.append(f"[green]{win_rate:.0f}[/green]")
+                    elif win_rate <= 45:
+                        row_values.append(f"[red]{win_rate:.0f}[/red]")
+                    else:
+                        row_values.append(f"[yellow]{win_rate:.0f}[/yellow]")
+                else:
+                    row_values.append("[dim]?[/dim]")
+
+        table.add_row(*row_values)
+
+    console.print(table)
+    console.print()
+
+    # Legend
+    legend = "[green]Green[/green]=Favored (55%+)  [yellow]Yellow[/yellow]=Even (46-54%)  [red]Red[/red]=Unfavored (45%-)" if CURRENT_LANGUAGE == Language.EN else "[green]Verde[/green]=Favorecido (55%+)  [yellow]Amarelo[/yellow]=Equilibrado (46-54%)  [red]Vermelho[/red]=Desfavorecido (45%-)"
+    console.print(f"[dim]{legend}[/dim]")
+    console.print()
+
+    # Ask to view specific matchup
+    prompt_text = "Enter two deck numbers to see detailed matchup (e.g., '1 3') or 'q' to go back" if CURRENT_LANGUAGE == Language.EN else "Digite dois numeros de deck para ver confronto detalhado (ex: '1 3') ou 'q' para voltar"
+    choice = Prompt.ask(prompt_text, default="q")
+
+    if choice.lower() == "q":
+        return
+
+    try:
+        parts = choice.split()
+        if len(parts) == 2:
+            idx_a, idx_b = int(parts[0]) - 1, int(parts[1]) - 1
+            if 0 <= idx_a < len(decks) and 0 <= idx_b < len(decks) and idx_a != idx_b:
+                deck_a = decks[idx_a]
+                deck_b = decks[idx_b]
+                matchup = get_matchup(deck_a.id, deck_b.id)
+
+                if matchup:
+                    console.print()
+                    console.print(Panel(
+                        f"[bold]{deck_a.get_name(CURRENT_LANGUAGE)}[/bold] vs [bold]{deck_b.get_name(CURRENT_LANGUAGE)}[/bold]\n\n"
+                        f"[cyan]{deck_a.get_name(CURRENT_LANGUAGE)}[/cyan] {get_translation('win_rate', CURRENT_LANGUAGE)}: "
+                        f"[bold]{matchup.win_rate_a:.0f}%[/bold]\n"
+                        f"[magenta]{deck_b.get_name(CURRENT_LANGUAGE)}[/magenta] {get_translation('win_rate', CURRENT_LANGUAGE)}: "
+                        f"[bold]{matchup.win_rate_b:.0f}%[/bold]\n\n"
+                        f"[dim]{get_translation('notes', CURRENT_LANGUAGE)}: {matchup.get_notes(CURRENT_LANGUAGE)}[/dim]",
+                        title="Matchup Analysis",
+                        border_style="cyan"
+                    ))
+                else:
+                    console.print("[yellow]Matchup data not available.[/yellow]")
+    except (ValueError, IndexError):
+        console.print("[yellow]Invalid input.[/yellow]")
+
+
+def run_deck_suggestion():
+    """Run deck suggestion mode with meta integration."""
+    global CURRENT_LANGUAGE
+
+    console.print()
+    prompt_text = "Enter Pokemon name" if CURRENT_LANGUAGE == Language.EN else "Digite o nome do Pokemon"
+    pokemon_name = Prompt.ask(f"[bold]{prompt_text}[/bold]")
+
+    if not pokemon_name.strip():
+        msg = "No Pokemon name provided." if CURRENT_LANGUAGE == Language.EN else "Nenhum nome de Pokemon fornecido."
+        console.print(f"[yellow]{msg}[/yellow]")
+        return
+
+    # First check for meta decks
+    with console.status(f"[bold cyan]Searching meta decks for {pokemon_name}...[/bold cyan]"):
+        meta_suggestions = suggest_meta_deck_for_pokemon(pokemon_name, CURRENT_LANGUAGE)
+
+    if meta_suggestions:
+        title = f"Meta Decks featuring {pokemon_name}" if CURRENT_LANGUAGE == Language.EN else f"Decks do Meta com {pokemon_name}"
+        console.print(Panel.fit(f"[bold green]{title}[/bold green]", border_style="green"))
+        console.print()
+
+        for i, suggestion in enumerate(meta_suggestions, 1):
+            deck = suggestion.deck
+            console.print(f"[cyan]{i}.[/cyan] [bold]{deck.get_name(CURRENT_LANGUAGE)}[/bold] (Tier {deck.tier}, {deck.meta_share:.1f}% meta)")
+            console.print(f"   {deck.get_description(CURRENT_LANGUAGE)}")
+            console.print()
+
+        prompt_text = "Enter number to view deck details (or 'c' to continue with generic suggestions)" if CURRENT_LANGUAGE == Language.EN else "Digite o numero para ver detalhes (ou 'c' para continuar com sugestoes genericas)"
+        choice = Prompt.ask(prompt_text, default="1")
+
+        if choice.lower() != "c":
+            try:
+                idx = int(choice) - 1
+                if 0 <= idx < len(meta_suggestions):
+                    console.print()
+                    print_meta_deck_detail(meta_suggestions[idx], CURRENT_LANGUAGE)
+
+                    show_list_prompt = "Show complete deck list?" if CURRENT_LANGUAGE == Language.EN else "Mostrar lista completa do deck?"
+                    if Confirm.ask(f"[cyan]{show_list_prompt}[/cyan]", default=True):
+                        print_meta_deck_list(meta_suggestions[idx], CURRENT_LANGUAGE)
+                    return
+            except ValueError:
+                pass
+
+    # Fall back to generic suggestions
     with console.status(f"[bold cyan]Searching for {pokemon_name}...[/bold cyan]"):
         collections = get_pokemon_collections(pokemon_name)
 
     if not collections:
-        console.print(f"[red]No Pokemon found matching '{pokemon_name}'.[/red]")
-        console.print("[dim]Try using the full name (e.g., 'Charizard' instead of 'Char').[/dim]")
+        msg = f"No Pokemon found matching '{pokemon_name}'." if CURRENT_LANGUAGE == Language.EN else f"Nenhum Pokemon encontrado para '{pokemon_name}'."
+        console.print(f"[red]{msg}[/red]")
+        tip = "Try using the full name (e.g., 'Charizard' instead of 'Char')." if CURRENT_LANGUAGE == Language.EN else "Tente usar o nome completo (ex: 'Charizard' em vez de 'Char')."
+        console.print(f"[dim]{tip}[/dim]")
         return
 
     # Show collections
     print_pokemon_collections(pokemon_name, collections)
 
     # Ask if user wants deck suggestions
-    if Confirm.ask("[cyan]Would you like deck suggestions for this Pokemon?[/cyan]", default=True):
+    prompt_text = "Would you like generic deck suggestions for this Pokemon?" if CURRENT_LANGUAGE == Language.EN else "Gostaria de sugestoes genericas de deck para este Pokemon?"
+    if Confirm.ask(f"[cyan]{prompt_text}[/cyan]", default=True):
         with console.status("[bold cyan]Generating deck suggestions...[/bold cyan]"):
             suggestions = suggest_deck_for_pokemon(pokemon_name)
 
@@ -658,6 +993,9 @@ def main():
             console.print("  -r, --rotation          Run rotation analysis only")
             console.print("  -c, --compare           Run deck comparison only")
             console.print("  -s, --suggest [name]    Suggest deck for a Pokemon")
+            console.print("  -m, --meta              Browse top 8 meta decks")
+            console.print("  --matchups              View meta matchup chart")
+            console.print("  --lang [en|pt]          Set language (English/Portuguese)")
             console.print("  --vs <deck.txt>         Compare against specific deck(s)")
             console.print("  -h, --help              Show this help")
             console.print()
@@ -668,7 +1006,21 @@ def main():
             console.print("  python main.py my_deck.txt --vs opp.txt     # Compare against specific deck")
             console.print("  python main.py -s Charizard                 # Suggest deck for Charizard")
             console.print("  python main.py --suggest \"Pikachu ex\"       # Suggest deck for Pikachu ex")
+            console.print("  python main.py -m                           # Browse meta decks")
+            console.print("  python main.py --matchups                   # View matchup chart")
+            console.print("  python main.py -m --lang pt                 # Meta decks in Portuguese")
             return
+        elif arg in ["-m", "--meta"]:
+            mode = "meta"
+        elif arg == "--matchups":
+            mode = "matchups"
+        elif arg == "--lang":
+            if i + 1 < len(args):
+                i += 1
+                if args[i].lower() == "pt":
+                    CURRENT_LANGUAGE = Language.PT
+                else:
+                    CURRENT_LANGUAGE = Language.EN
         elif arg == "--vs":
             if i + 1 < len(args):
                 i += 1
@@ -683,22 +1035,49 @@ def main():
     # Handle suggest mode from command line
     if mode == "suggest":
         if pokemon_name:
-            with console.status(f"[bold cyan]Searching for {pokemon_name}...[/bold cyan]"):
-                collections = get_pokemon_collections(pokemon_name)
+            # First check for meta decks
+            meta_suggestions = suggest_meta_deck_for_pokemon(pokemon_name, CURRENT_LANGUAGE)
+            if meta_suggestions:
+                title = f"Meta Decks featuring {pokemon_name}" if CURRENT_LANGUAGE == Language.EN else f"Decks do Meta com {pokemon_name}"
+                console.print(Panel.fit(f"[bold green]{title}[/bold green]", border_style="green"))
+                console.print()
 
-            if not collections:
-                console.print(f"[red]No Pokemon found matching '{pokemon_name}'.[/red]")
-                sys.exit(1)
+                for i, suggestion in enumerate(meta_suggestions, 1):
+                    deck = suggestion.deck
+                    console.print(f"[cyan]{i}.[/cyan] [bold]{deck.get_name(CURRENT_LANGUAGE)}[/bold] (Tier {deck.tier}, {deck.meta_share:.1f}% meta)")
+                    print_meta_deck_detail(suggestion, CURRENT_LANGUAGE)
+                    print_meta_deck_list(suggestion, CURRENT_LANGUAGE)
+            else:
+                with console.status(f"[bold cyan]Searching for {pokemon_name}...[/bold cyan]"):
+                    collections = get_pokemon_collections(pokemon_name)
 
-            print_pokemon_collections(pokemon_name, collections)
+                if not collections:
+                    console.print(f"[red]No Pokemon found matching '{pokemon_name}'.[/red]")
+                    sys.exit(1)
 
-            with console.status("[bold cyan]Generating deck suggestions...[/bold cyan]"):
-                suggestions = suggest_deck_for_pokemon(pokemon_name)
+                print_pokemon_collections(pokemon_name, collections)
 
-            print_deck_suggestions(pokemon_name, suggestions)
+                with console.status("[bold cyan]Generating deck suggestions...[/bold cyan]"):
+                    suggestions = suggest_deck_for_pokemon(pokemon_name)
+
+                print_deck_suggestions(pokemon_name, suggestions)
         else:
             run_deck_suggestion()
 
+        console.print()
+        console.print("[dim]Thank you for using TCG Rotation Checker![/dim]")
+        return
+
+    # Handle meta mode from command line
+    if mode == "meta":
+        run_browse_meta_decks()
+        console.print()
+        console.print("[dim]Thank you for using TCG Rotation Checker![/dim]")
+        return
+
+    # Handle matchups mode from command line
+    if mode == "matchups":
+        run_view_matchups()
         console.print()
         console.print("[dim]Thank you for using TCG Rotation Checker![/dim]")
         return
@@ -712,11 +1091,20 @@ def main():
     else:
         # Interactive menu
         print_menu()
-        choice = Prompt.ask("Select option", choices=["1", "2", "3", "4", "q"], default="1")
+        choice = Prompt.ask("Select option", choices=["1", "2", "3", "4", "5", "6", "l", "L", "q"], default="1")
 
-        if choice == "q":
+        if choice.lower() == "q":
             console.print("[dim]Goodbye![/dim]")
             return
+
+        if choice.lower() == "l":
+            # Toggle language
+            CURRENT_LANGUAGE = Language.PT if CURRENT_LANGUAGE == Language.EN else Language.EN
+            lang_msg = "Language changed to Portuguese" if CURRENT_LANGUAGE == Language.PT else "Language changed to English"
+            console.print(f"[green]{lang_msg}[/green]")
+            console.print()
+            print_menu()
+            choice = Prompt.ask("Select option", choices=["1", "2", "3", "4", "5", "6", "l", "q"], default="1")
 
         if choice == "1":
             mode = "rotation"
@@ -724,6 +1112,16 @@ def main():
             mode = "compare"
         elif choice == "4":
             run_deck_suggestion()
+            console.print()
+            console.print("[dim]Thank you for using TCG Rotation Checker![/dim]")
+            return
+        elif choice == "5":
+            run_browse_meta_decks()
+            console.print()
+            console.print("[dim]Thank you for using TCG Rotation Checker![/dim]")
+            return
+        elif choice == "6":
+            run_view_matchups()
             console.print()
             console.print("[dim]Thank you for using TCG Rotation Checker![/dim]")
             return
