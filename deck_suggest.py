@@ -1,7 +1,13 @@
-"""Deck suggestion module for Pokemon TCG."""
+"""Deck suggestion module for Pokemon TCG with meta integration and bilingual support."""
 from dataclasses import dataclass, field
 from typing import Optional
 from card_api import search_pokemon_by_name, get_pokemon_details
+from meta_database import (
+    META_DECKS, MetaDeck, Language, CardEntry,
+    get_matchup, get_deck_matchups, calculate_meta_score,
+    search_deck_by_pokemon, get_tier_list, get_all_decks,
+    get_translation, get_difficulty_translation, UI_TRANSLATIONS
+)
 
 
 @dataclass
@@ -345,16 +351,218 @@ def create_deck_suggestion(pokemon: PokemonInfo) -> Optional[DeckSuggestion]:
     )
 
 
-def get_legal_status(regulation_mark: str) -> str:
+def get_legal_status(regulation_mark: str, lang: Language = Language.EN) -> str:
     """Get the legality status of a card based on regulation mark."""
     if not regulation_mark:
-        return "Unknown"
+        return "Unknown" if lang == Language.EN else "Desconhecido"
 
     if regulation_mark in ["A", "B", "C", "D", "E", "F"]:
-        return "Illegal (Rotated)"
+        return "Illegal (Rotated)" if lang == Language.EN else "Ilegal (Rotacionado)"
     elif regulation_mark == "G":
-        return "Rotating March 2026"
+        return "Rotating March 2026" if lang == Language.EN else "Rotacionando Marco 2026"
     elif regulation_mark in ["H", "I", "J", "K"]:
-        return "Legal (Standard)"
+        return "Legal (Standard)" if lang == Language.EN else "Legal (Standard)"
     else:
-        return "Unknown"
+        return "Unknown" if lang == Language.EN else "Desconhecido"
+
+
+# =============================================================================
+# META DECK SUGGESTION FUNCTIONS
+# =============================================================================
+
+@dataclass
+class MetaDeckSuggestion:
+    """A meta deck suggestion with full details."""
+    deck: MetaDeck
+    relevance_score: float  # 0-100 based on how well it matches search
+    meta_score: float  # Overall meta viability score
+    matchups: list[tuple[str, float, str]]  # (opponent_name, win_rate, notes)
+
+    def get_deck_list_formatted(self, lang: Language = Language.EN) -> str:
+        """Get formatted deck list."""
+        return self.deck.get_deck_list(lang)
+
+
+def suggest_meta_deck_for_pokemon(pokemon_name: str, lang: Language = Language.EN) -> list[MetaDeckSuggestion]:
+    """
+    Suggest competitive meta decks that feature a specific Pokemon.
+    Returns decks sorted by relevance and meta viability.
+    """
+    matching_decks = search_deck_by_pokemon(pokemon_name)
+
+    if not matching_decks:
+        return []
+
+    suggestions = []
+    for deck in matching_decks:
+        # Calculate relevance (how central is this Pokemon to the deck)
+        relevance = 50.0  # Base score
+        pokemon_lower = pokemon_name.lower()
+
+        # Check if it's a key Pokemon
+        for key_mon in deck.key_pokemon:
+            if pokemon_lower in key_mon.lower():
+                relevance += 40.0
+                break
+
+        # Check card count
+        for card in deck.cards:
+            if card.card_type == "pokemon" and pokemon_lower in card.name_en.lower():
+                relevance += card.quantity * 2.5
+
+        # Cap relevance at 100
+        relevance = min(100.0, relevance)
+
+        # Get meta score
+        meta_score = calculate_meta_score(deck.id)
+
+        # Get matchups
+        matchups = []
+        for opp_id, win_rate, notes in get_deck_matchups(deck.id):
+            opp_deck = META_DECKS.get(opp_id)
+            if opp_deck:
+                opp_name = opp_deck.get_name(lang)
+                matchup_data = get_matchup(deck.id, opp_id)
+                if matchup_data:
+                    notes_translated = matchup_data.get_notes(lang)
+                    matchups.append((opp_name, win_rate, notes_translated))
+
+        suggestions.append(MetaDeckSuggestion(
+            deck=deck,
+            relevance_score=relevance,
+            meta_score=meta_score,
+            matchups=matchups
+        ))
+
+    # Sort by relevance first, then meta score
+    suggestions.sort(key=lambda s: (s.relevance_score, s.meta_score), reverse=True)
+
+    return suggestions
+
+
+def get_top_meta_decks(limit: int = 8, lang: Language = Language.EN) -> list[MetaDeckSuggestion]:
+    """Get the top meta decks with full details."""
+    all_decks = get_all_decks()[:limit]
+
+    suggestions = []
+    for deck in all_decks:
+        meta_score = calculate_meta_score(deck.id)
+
+        matchups = []
+        for opp_id, win_rate, notes in get_deck_matchups(deck.id):
+            opp_deck = META_DECKS.get(opp_id)
+            if opp_deck:
+                opp_name = opp_deck.get_name(lang)
+                matchup_data = get_matchup(deck.id, opp_id)
+                if matchup_data:
+                    notes_translated = matchup_data.get_notes(lang)
+                    matchups.append((opp_name, win_rate, notes_translated))
+
+        suggestions.append(MetaDeckSuggestion(
+            deck=deck,
+            relevance_score=100.0,  # All are top meta
+            meta_score=meta_score,
+            matchups=matchups
+        ))
+
+    return suggestions
+
+
+def get_deck_counter(deck_id: str, lang: Language = Language.EN) -> Optional[MetaDeckSuggestion]:
+    """Find the best counter deck for a given meta deck."""
+    if deck_id not in META_DECKS:
+        return None
+
+    best_counter = None
+    best_winrate = 0
+
+    for counter_id, counter_deck in META_DECKS.items():
+        if counter_id == deck_id:
+            continue
+
+        matchup = get_matchup(counter_id, deck_id)
+        if matchup and matchup.win_rate_a > best_winrate:
+            best_winrate = matchup.win_rate_a
+            best_counter = counter_deck
+
+    if best_counter is None:
+        return None
+
+    meta_score = calculate_meta_score(best_counter.id)
+    matchups = []
+    for opp_id, win_rate, notes in get_deck_matchups(best_counter.id):
+        opp_deck = META_DECKS.get(opp_id)
+        if opp_deck:
+            opp_name = opp_deck.get_name(lang)
+            matchup_data = get_matchup(best_counter.id, opp_id)
+            if matchup_data:
+                notes_translated = matchup_data.get_notes(lang)
+                matchups.append((opp_name, win_rate, notes_translated))
+
+    return MetaDeckSuggestion(
+        deck=best_counter,
+        relevance_score=best_winrate,
+        meta_score=meta_score,
+        matchups=matchups
+    )
+
+
+def get_matchup_spread_text(deck_id: str, lang: Language = Language.EN) -> str:
+    """Get a formatted text summary of a deck's matchup spread."""
+    if deck_id not in META_DECKS:
+        return ""
+
+    deck = META_DECKS[deck_id]
+    matchups = get_deck_matchups(deck_id)
+
+    lines = []
+    header = f"Matchup Spread - {deck.get_name(lang)}" if lang == Language.EN else f"Confrontos - {deck.get_name(lang)}"
+    lines.append(header)
+    lines.append("=" * len(header))
+
+    favored_label = get_translation("favored", lang)
+    unfavored_label = get_translation("unfavored", lang)
+    even_label = get_translation("even", lang)
+
+    for opp_id, win_rate, notes in matchups:
+        opp_deck = META_DECKS.get(opp_id)
+        if opp_deck:
+            opp_name = opp_deck.get_name(lang)
+
+            if win_rate >= 55:
+                status = f"[{favored_label}]"
+            elif win_rate <= 45:
+                status = f"[{unfavored_label}]"
+            else:
+                status = f"[{even_label}]"
+
+            matchup_data = get_matchup(deck_id, opp_id)
+            notes_text = matchup_data.get_notes(lang) if matchup_data else ""
+
+            lines.append(f"  vs {opp_name}: {win_rate:.0f}% {status}")
+            if notes_text:
+                lines.append(f"      {notes_text}")
+
+    return "\n".join(lines)
+
+
+def format_deck_suggestion_bilingual(suggestion: MetaDeckSuggestion, lang: Language = Language.EN) -> dict:
+    """Format a deck suggestion for display in specified language."""
+    deck = suggestion.deck
+
+    return {
+        "name": deck.get_name(lang),
+        "tier": deck.tier,
+        "meta_share": f"{deck.meta_share:.1f}%",
+        "difficulty": get_difficulty_translation(deck.difficulty, lang),
+        "description": deck.get_description(lang),
+        "strategy": deck.get_strategy(lang),
+        "strengths": deck.get_strengths(lang),
+        "weaknesses": deck.get_weaknesses(lang),
+        "key_pokemon": deck.key_pokemon,
+        "energy_types": deck.energy_types,
+        "deck_list": deck.get_deck_list(lang),
+        "matchups": suggestion.matchups,
+        "meta_score": f"{suggestion.meta_score:.1f}%",
+        "total_cards": deck.total_cards(),
+    }
