@@ -21,11 +21,13 @@ from kivy.uix.tabbedpanel import TabbedPanel, TabbedPanelItem
 from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.core.window import Window
 from kivy.metrics import dp
-from kivy.utils import get_color_from_hex
+from kivy.utils import get_color_from_hex, platform
 from kivy.clock import Clock
 
-# Set window size for testing on desktop
-Window.size = (400, 700)
+# Only set window size on desktop (not Android)
+# This allows foldable phones like Samsung Z Fold to work correctly
+if platform not in ('android', 'ios'):
+    Window.size = (400, 700)
 
 # Import meta database
 from meta_data import (
@@ -622,7 +624,42 @@ class TCGMetaApp(App):
         sm.add_widget(MatchupsScreen(name='matchups'))
         sm.add_widget(SearchScreen(name='search'))
 
+        # Bind to window resize for foldable devices (Samsung Z Fold, etc.)
+        Window.bind(on_resize=self.on_window_resize)
+
         return sm
+
+    def on_window_resize(self, window, width, height):
+        """Handle window resize for foldable phones."""
+        # Force refresh of current screen when window size changes
+        # This handles fold/unfold transitions on Samsung Z Fold
+        if self.root:
+            current = self.root.current
+            current_screen = self.root.get_screen(current)
+            # Trigger a layout refresh
+            current_screen.do_layout()
+
+    def on_start(self):
+        """Called when the app starts."""
+        # Handle Android-specific configurations
+        if platform == 'android':
+            # Request proper window flags for foldable support
+            try:
+                from android.runnable import run_on_ui_thread
+                from jnius import autoclass
+
+                @run_on_ui_thread
+                def set_window_flags():
+                    PythonActivity = autoclass('org.kivy.android.PythonActivity')
+                    activity = PythonActivity.mActivity
+                    window = activity.getWindow()
+                    # Allow layout to extend into display cutout areas
+                    if hasattr(window, 'setDecorFitsSystemWindows'):
+                        window.setDecorFitsSystemWindows(False)
+
+                set_window_flags()
+            except Exception as e:
+                print(f"Could not set Android window flags: {e}")
 
 
 if __name__ == '__main__':

@@ -10,6 +10,7 @@ Aplicativo Android para navegar pelos top decks competitivos de Pokemon TCG com 
 - **Matchup Analysis**: Win rates e notas para cada confronto
 - **Pokemon Search**: Busque decks que contêm um Pokemon específico
 - **Bilingual**: Suporte completo para Português e Inglês
+- **Foldable Support**: Compatível com Samsung Z Fold e outros dispositivos dobráveis
 
 ## Requisitos para Build
 
@@ -167,6 +168,37 @@ buildozer android debug
 adb logcat | grep python
 ```
 
+### Erro: "No route to host" ao baixar Apache ANT
+
+```bash
+# Instalar ANT via apt em vez de download automático
+sudo apt install ant
+
+# Depois rode o build novamente
+buildozer android debug
+```
+
+### Erro: Cython/pyjnius "undeclared name: long"
+
+```bash
+# Usar Cython versão < 3.0
+pip install "Cython<3.0" --force-reinstall
+rm -rf .buildozer
+buildozer android debug
+```
+
+### App não renderiza corretamente em dispositivos dobráveis (Samsung Z Fold)
+
+O app já inclui suporte para dispositivos dobráveis. Se ainda houver problemas:
+
+1. Certifique-se de que está usando a versão mais recente do código
+2. Limpe o cache e rebuild:
+```bash
+rm -rf .buildozer
+buildozer android debug
+```
+3. No dispositivo, vá em Configurações > Apps > TCG Meta > permitir "Redimensionável em multi-janela"
+
 ## Build via GitHub Actions (CI/CD)
 
 Crie `.github/workflows/build.yml`:
@@ -253,6 +285,14 @@ META_DECKS["novo_deck"] = MetaDeck(
 - Buildozer: 1.5.0
 - Android API: 21-33
 - Arquiteturas: arm64-v8a, armeabi-v7a
+
+### Dispositivos Testados
+
+| Dispositivo | Status | Notas |
+|-------------|--------|-------|
+| Samsung Z Fold 6 | ✓ | Suporte completo para telas aberta/fechada |
+| Samsung Z Fold 5 | ✓ | Funciona em ambas orientações |
+| Outros Android | ✓ | Qualquer dispositivo Android 5.0+ |
 
 > **Nota:** Se estiver usando Python 3.12+, instale `setuptools` antes: `pip install setuptools`
 
