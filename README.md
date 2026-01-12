@@ -929,13 +929,11 @@ O projeto inclui um aplicativo Android nativo desenvolvido com Kivy para navegar
 ### Testar no Desktop (sem build)
 
 ```bash
-cd android_app
-
 # Instalar Kivy
 pip install kivy
 
-# Executar
-python main.py
+# Executar (de qualquer diretório)
+python android_app/main.py
 ```
 
 ### Gerar APK (Android)

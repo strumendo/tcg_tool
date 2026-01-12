@@ -99,12 +99,14 @@ adb install bin/tcgmeta-1.0.0-arm64-v8a_armeabi-v7a-debug.apk
 Para testar a interface antes de gerar o APK:
 
 ```bash
-cd android_app
-
 # Instalar dependências
 pip install kivy
 
-# Executar
+# Opção 1: Executar de qualquer diretório
+python android_app/main.py
+
+# Opção 2: Executar de dentro da pasta
+cd android_app
 python main.py
 ```
 
