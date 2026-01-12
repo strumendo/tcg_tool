@@ -1,6 +1,8 @@
 # TCG Rotation Checker
 
-Ferramenta CLI para analisar decks de Pokemon TCG, verificar o impacto da rotação de março de 2026 e comparar matchups contra outros decks.
+Ferramenta CLI para analisar decks de Pokemon TCG, verificar o impacto da rotação de março de 2026, comparar matchups contra outros decks e consultar o meta competitivo com suporte bilíngue (Português/Inglês).
+
+---
 
 ## Funcionalidades
 
@@ -21,8 +23,23 @@ Ferramenta CLI para analisar decks de Pokemon TCG, verificar o impacto da rotaç
 - Busca um Pokemon pelo nome
 - Identifica em quais coleções/sets o Pokemon aparece
 - Mostra status de legalidade (Legal, Rotacionando, Ilegal)
+- **NOVO**: Integração com base de dados do meta competitivo
 - Sugere arquétipos de deck baseados no tipo do Pokemon
 - Inclui lista de cartas-chave, estratégia, forças e fraquezas
+
+### 4. Base de Dados do Meta (NOVO)
+- **Top 8 decks competitivos** com listas completas (60 cartas)
+- **Taxas de vitória (win rates)** entre todos os matchups
+- **Suporte bilíngue**: Português e Inglês
+- Informações detalhadas: estratégia, pontos fortes/fracos, dificuldade
+- Encontrar **counter decks** para qualquer deck do meta
+
+### 5. Tabela de Matchups (NOVO)
+- Matriz visual de win rates entre todos os decks
+- Indicadores de favorecido/desfavorecido/equilibrado
+- Notas explicativas para cada matchup
+
+---
 
 ## Instalação
 
@@ -51,6 +68,8 @@ pip install -r requirements.txt
 - `httpx` - Cliente HTTP para APIs
 - `rich` - Interface CLI com formatação
 
+---
+
 ## Uso
 
 ### Modo Interativo
@@ -58,11 +77,15 @@ pip install -r requirements.txt
 python main.py
 ```
 
-Exibe um menu com 4 opções:
+Exibe um menu com opções:
 1. Análise de rotação
 2. Comparação de decks
 3. Ambos
 4. Sugestão de deck por Pokemon
+5. **Navegar Decks do Meta (Top 8)** *(NOVO)*
+6. **Ver Tabela de Matchups** *(NOVO)*
+L. **Alternar Idioma (EN/PT)** *(NOVO)*
+q. Sair
 
 ### Com Arquivo
 ```bash
@@ -76,6 +99,9 @@ python main.py meu_deck.txt
 | `-r`, `--rotation` | Apenas análise de rotação |
 | `-c`, `--compare` | Apenas comparação de decks |
 | `-s`, `--suggest [nome]` | Sugestão de deck para um Pokemon |
+| `-m`, `--meta` | Navegar decks do meta *(NOVO)* |
+| `--matchups` | Ver tabela de matchups *(NOVO)* |
+| `--lang [en\|pt]` | Definir idioma (English/Português) *(NOVO)* |
 | `--vs <arquivo>` | Comparar contra deck específico |
 | `-h`, `--help` | Exibir ajuda |
 
@@ -98,14 +124,165 @@ python main.py meu_deck.txt -c
 python main.py meu_deck.txt --vs oponente.txt
 
 # Comparar contra múltiplos decks
-python main.py meu_deck.txt --vs lugia.txt --vs charizard.txt --vs regidrago.txt
+python main.py meu_deck.txt --vs lugia.txt --vs charizard.txt
 
 # Sugerir deck para um Pokemon
 python main.py -s Charizard
 
-# Sugerir deck para Pokemon com nome composto
+# Sugerir deck com nome composto
 python main.py --suggest "Pikachu ex"
+
+# Navegar decks do meta (NOVO)
+python main.py -m
+
+# Ver tabela de matchups (NOVO)
+python main.py --matchups
+
+# Decks do meta em português (NOVO)
+python main.py -m --lang pt
+
+# Sugestão em português (NOVO)
+python main.py -s Gardevoir --lang pt
 ```
+
+---
+
+## Base de Dados do Meta - Janeiro 2026
+
+### Top 8 Decks Competitivos
+
+| # | Deck | Meta Share | Tier | Dificuldade |
+|---|------|------------|------|-------------|
+| 1 | **Gholdengo ex** | 26.49% | 1 | Intermediário |
+| 2 | **Dragapult ex** | 19.95% | 1 | Intermediário |
+| 3 | **Gardevoir ex** | 16.61% | 1 | Avançado |
+| 4 | **Charizard ex / Pidgeot ex** | 13.86% | 1 | Iniciante |
+| 5 | **Raging Bolt ex / Ogerpon ex** | 8.50% | 1 | Iniciante |
+| 6 | **Marnie's Grimmsnarl ex / Froslass** | 6.50% | 1 | Avançado |
+| 7 | **Joltik Box** | 4.80% | 2 | Intermediário |
+| 8 | **Flareon ex** | 3.20% | 2 | Iniciante |
+
+### Matriz de Matchups (Win Rates)
+
+|              | Gholdengo | Dragapult | Gardevoir | Charizard | Raging Bolt | Grimmsnarl | Joltik | Flareon |
+|--------------|-----------|-----------|-----------|-----------|-------------|------------|--------|---------|
+| **Gholdengo**    | - | 55% | 48% | 60% | 50% | 55% | 52% | 25% |
+| **Dragapult**    | 45% | - | 40% | 55% | 45% | 50% | 48% | 55% |
+| **Gardevoir**    | 52% | 60% | - | 45% | 60% | 35% | 52% | 50% |
+| **Charizard**    | 40% | 45% | 55% | - | 45% | 55% | 50% | 65% |
+| **Raging Bolt**  | 50% | 55% | 40% | 55% | - | 60% | 52% | 55% |
+| **Grimmsnarl**   | 45% | 50% | 65% | 45% | 40% | - | 48% | 60% |
+| **Joltik**       | 48% | 52% | 48% | 50% | 48% | 52% | - | 55% |
+| **Flareon**      | 75% | 45% | 50% | 35% | 45% | 40% | 45% | - |
+
+**Legenda**: Verde (55%+) = Favorecido | Amarelo (46-54%) = Equilibrado | Vermelho (45%-) = Desfavorecido
+
+### Exemplo de Navegação do Meta
+
+```
+╭──────────────────────────────────────────╮
+│ Top 8 Meta Decks - January 2026          │
+╰──────────────────────────────────────────╯
+
+                    Meta Tier List
+╭───┬──────────────────────────────┬──────┬────────────┬───────────────╮
+│ # │ Deck                         │ Tier │ Meta Share │ Difficulty    │
+├───┼──────────────────────────────┼──────┼────────────┼───────────────┤
+│ 1 │ Gholdengo ex                 │  1   │     26.5%  │ Intermediate  │
+│ 2 │ Dragapult ex                 │  1   │     20.0%  │ Intermediate  │
+│ 3 │ Gardevoir ex                 │  1   │     16.6%  │ Advanced      │
+│ 4 │ Charizard ex / Pidgeot ex    │  1   │     13.9%  │ Beginner      │
+│ 5 │ Raging Bolt ex / Ogerpon ex  │  1   │      8.5%  │ Beginner      │
+│ 6 │ Marnie's Grimmsnarl ex       │  1   │      6.5%  │ Advanced      │
+│ 7 │ Joltik Box                   │  2   │      4.8%  │ Intermediate  │
+│ 8 │ Flareon ex                   │  2   │      3.2%  │ Beginner      │
+╰───┴──────────────────────────────┴──────┴────────────┴───────────────╯
+
+Enter deck number to view details (or 'q' to go back): 1
+```
+
+### Exemplo de Detalhes do Deck
+
+```
+╭─────────────────────────────────────────────────────────────────────────────╮
+│ Gholdengo ex                                                                │
+│ The #1 deck in the meta with incredible draw power and infinite damage      │
+│                                                                             │
+│ Tier: 1  |  Meta Share: 26.5%  |  Difficulty: Intermediate                  │
+╰─────────────────────────────────────────────────────────────────────────────╯
+
+Strategy:
+  Use Gholdengo ex's Coin Bonus ability to draw cards each turn...
+
+Key Pokemon: Gholdengo ex, Genesect ex, Gimmighoul
+Energy: Metal, Basic
+
+╭──────────────────────────────────────┬──────────────────────────────────────╮
+│ Strengths                            │ Weaknesses                           │
+├──────────────────────────────────────┼──────────────────────────────────────┤
+│ Highest damage ceiling in format     │ Weak to Fire (Flareon ex)            │
+│ Excellent draw power with Coin Bonus │ Needs many energy in hand            │
+│ Can OHKO any Pokemon                 │ Struggles against disruption         │
+╰──────────────────────────────────────┴──────────────────────────────────────╯
+
+Matchups:
+╭──────────────────────┬──────────┬────────────┬─────────────────────────────╮
+│ vs                   │ Win Rate │            │ Notes                       │
+├──────────────────────┼──────────┼────────────┼─────────────────────────────┤
+│ Charizard ex         │    60%   │ Favored    │ Can OHKO before setup       │
+│ Dragapult ex         │    55%   │ Favored    │ OHKO potential advantage    │
+│ Grimmsnarl ex        │    55%   │ Favored    │ Grimmsnarl lacks OHKOs      │
+│ Joltik Box           │    52%   │ Even       │ Higher damage ceiling       │
+│ Raging Bolt ex       │    50%   │ Even       │ Depends on who goes first   │
+│ Gardevoir ex         │    48%   │ Even       │ Playable with good exec     │
+│ Flareon ex           │    25%   │ Unfavored  │ Flareon deals double damage │
+╰──────────────────────┴──────────┴────────────┴─────────────────────────────╯
+```
+
+### Exemplo de Lista Completa (Bilíngue)
+
+**Inglês:**
+```
+Pokemon (16):
+  4 Gimmighoul PRE 86
+  3 Gholdengo ex PRE 164
+  2 Genesect ex JTG 51
+  ...
+
+Trainer (29):
+  4 Iono PAL 185
+  4 Arven OBF 186
+  ...
+
+Energy (15):
+  4 Basic Metal Energy SVE 8
+  ...
+
+Total: 60
+```
+
+**Português:**
+```
+Pokemon (16):
+  4 Gimmighoul PRE 86
+  3 Gholdengo ex PRE 164
+  2 Genesect ex JTG 51
+  ...
+
+Treinador (29):
+  4 Iono PAL 185
+  4 Arven OBF 186
+  2 Ordens do Chefe PAL 172
+  ...
+
+Energia (15):
+  4 Energia Metal Basica SVE 8
+  ...
+
+Total: 60
+```
+
+---
 
 ## Formato de Deck (PTCGO)
 
@@ -136,6 +313,8 @@ Energy: 10
 4 Reversal Energy PAL 192
 ```
 
+---
+
 ## Sobre a Rotação
 
 Em **março de 2026**, todas as cartas com **Regulation Mark G** sairão do formato Standard:
@@ -160,253 +339,486 @@ Em **março de 2026**, todas as cartas com **Regulation Mark G** sairão do form
 | **H** | Legal | Scarlet & Violet (2024-2025) |
 | **I** | Legal | Scarlet & Violet (2025-2026) |
 
-### Exemplo de Análise de Rotação
+---
+
+## Estrutura do Projeto
 
 ```
-╭───────────────────────────── Rotation Analysis ─────────────────────────────╮
-│ Impact: 89.8% (CRITICAL)                                                    │
-│ Rotating (March 2026): 49 cards                                             │
-│ Already Illegal: 4 cards                                                    │
-│ Safe: 6 cards                                                               │
-╰─────────────────────────────────────────────────────────────────────────────╯
-
- Already Illegal (Regulation F or earlier)
-╭─────┬───────────────────┬─────────┬─────╮
-│ Qty │ Card Name         │ Set     │ Reg │
-├─────┼───────────────────┼─────────┼─────┤
-│   1 │ Rotom V           │ LOR 177 │ F   │
-│   1 │ Manaphy           │ BRS 41  │ F   │
-│   2 │ Forest Seal Stone │ SIT 156 │ F   │
-╰─────┴───────────────────┴─────────┴─────╯
-
- Rotating March 2026 (Regulation G)
-╭─────┬─────────────────┬─────────┬─────────────────────╮
-│ Qty │ Card Name       │ Set     │ Type                │
-├─────┼─────────────────┼─────────┼─────────────────────┤
-│   4 │ Charizard ex    │ OBF 125 │ Pokemon             │
-│   4 │ Iono            │ PAL 185 │ Trainer (supporter) │
-│   4 │ Ultra Ball      │ SVI 196 │ Trainer (item)      │
-╰─────┴─────────────────┴─────────┴─────────────────────╯
-
- Safe (Regulation H, I or later)
-╭─────┬───────────────────┬───────┬─────╮
-│ Qty │ Card Name         │ Set   │ Reg │
-├─────┼───────────────────┼───────┼─────┤
-│   6 │ Basic Fire Energy │ SVE 2 │ H   │
-╰─────┴───────────────────┴───────┴─────╯
+tcg_tool/
+├── main.py              # CLI principal com menu interativo
+├── meta_database.py     # Base de dados do meta (NOVO)
+├── deck_suggest.py      # Sugestão de deck por Pokemon
+├── deck_parser.py       # Parser formato PTCGO
+├── rotation_checker.py  # Análise de rotação
+├── deck_compare.py      # Comparação de decks e matchups
+├── substitution.py      # Lógica de substituição
+├── card_api.py          # Integração TCGdex/Pokemon TCG API
+├── models.py            # Dataclasses (Card, Deck, Substitution)
+├── database.py          # SQLite para cache de cartas
+├── requirements.txt     # Dependências Python
+├── example_deck.txt     # Deck Charizard ex de exemplo
+└── example_opponent.txt # Deck Lugia VSTAR de exemplo
 ```
 
-## Comparação de Decks
+---
 
-A análise de matchup considera múltiplos fatores:
+## Documentação dos Módulos Python
 
-### Cartas em Comum
-Identifica cartas compartilhadas entre os decks e suas quantidades.
+### `main.py` - Interface Principal
 
-### Vantagens de Tipo
-Analisa fraquezas de tipos de Pokemon:
+**Descrição**: Ponto de entrada da aplicação CLI. Gerencia o menu interativo, parsing de argumentos de linha de comando e orquestra todas as funcionalidades.
 
-| Atacante | Tem Vantagem Sobre |
-|----------|-------------------|
-| Fire | Grass, Metal |
-| Water | Fire |
-| Lightning | Water |
-| Fighting | Lightning, Darkness, Colorless |
-| Psychic | Fighting |
-| Darkness | Psychic |
-| Metal | Fairy |
-| Dragon | Dragon |
+**Funcionalidades principais**:
+- Menu interativo com 7 opções (rotação, comparação, sugestão, meta, matchups, idioma)
+- Parsing de argumentos CLI (-r, -c, -s, -m, --matchups, --lang)
+- Funções de exibição formatada com Rich (tabelas, painéis, cores)
+- Gerenciamento de idioma global (CURRENT_LANGUAGE)
 
-### Métricas de Análise
+**Funções principais**:
+| Função | Descrição |
+|--------|-----------|
+| `main()` | Ponto de entrada, processa args e inicia modo apropriado |
+| `print_menu()` | Exibe menu principal com opções |
+| `run_browse_meta_decks()` | Navega pelos top 8 decks do meta |
+| `run_view_matchups()` | Exibe matriz de matchups |
+| `run_deck_suggestion()` | Fluxo de sugestão de deck |
+| `print_meta_deck_detail()` | Exibe detalhes de um deck do meta |
+| `print_meta_deck_list()` | Exibe lista completa de 60 cartas |
+| `run_rotation_analysis()` | Executa análise de rotação |
+| `run_deck_comparison()` | Executa comparação entre decks |
 
-| Métrica | Descrição |
-|---------|-----------|
-| **Similaridade** | Porcentagem de cartas em comum |
-| **Velocidade** | Baseado em cartas de busca/setup |
-| **Consistência** | Baseado em draw supporters |
-| **Opções de Ataque** | Quantidade de atacantes principais (ex, V, VSTAR) |
+---
 
-### Exemplo de Comparação
+### `meta_database.py` - Base de Dados do Meta (NOVO)
 
-```
-╭──────────────────╮
-│ Deck Comparison  │
-│ Similarity: 8.3% │
-╰──────────────────╯
+**Descrição**: Contém dados completos dos 8 melhores decks competitivos com suporte bilíngue, incluindo listas de 60 cartas, matchups e estatísticas.
 
-                 Shared Cards (3)
-╭───────────────┬──────────────┬──────────────────╮
-│ Card Name     │ Your Deck    │ Opponent         │
-├───────────────┼──────────────┼──────────────────┤
-│ Boss's Orders │            2 │                2 │
-│ Iono          │            4 │                4 │
-│ Ultra Ball   │            4 │                4 │
-╰───────────────┴──────────────┴──────────────────╯
+**Classes principais**:
 
-                     Unique Cards
-╭──────────────────────┬──────────────────────────────╮
-│ Your Deck Only       │ Opponent Only                │
-├──────────────────────┼──────────────────────────────┤
-│ 4x Charizard ex      │ 3x Lugia VSTAR               │
-│ 4x Arven             │ 4x Archeops                  │
-│ 4x Rare Candy        │ 4x Double Turbo Energy       │
-╰──────────────────────┴──────────────────────────────╯
+```python
+class Language(Enum):
+    EN = "en"  # Inglês
+    PT = "pt"  # Português
 
-╭─────────────────────────────╮
-│ Matchup Analysis            │
-│ Opponent is favored         │
-╰─────────────────────────────╯
+@dataclass
+class CardEntry:
+    quantity: int          # Quantidade (1-4)
+    name_en: str           # Nome em inglês
+    name_pt: str           # Nome em português
+    set_code: str          # Código do set (OBF, PAL, etc.)
+    set_number: str        # Número da carta
+    card_type: str         # "pokemon", "trainer", "energy"
 
-                  Advantages
-╭──────────────┬──────────────────────────────╮
-│ Your Deck    │ Opponent                     │
-├──────────────┼──────────────────────────────┤
-│              │ More attack options (4 vs 3) │
-╰──────────────┴──────────────────────────────╯
+@dataclass
+class MetaDeck:
+    id: str                # Identificador único
+    name_en: str           # Nome em inglês
+    name_pt: str           # Nome em português
+    tier: int              # Tier (1, 2 ou 3)
+    description_en/pt: str # Descrição do deck
+    strategy_en/pt: str    # Estratégia detalhada
+    difficulty: str        # Beginner/Intermediate/Advanced
+    cards: list[CardEntry] # Lista completa de 60 cartas
+    strengths_en/pt: list  # Pontos fortes
+    weaknesses_en/pt: list # Pontos fracos
+    key_pokemon: list[str] # Pokemon principais
+    energy_types: list[str]# Tipos de energia
+    meta_share: float      # % do meta
 
-Key Differences:
-  • Opponent runs more Pokemon (24 vs 18)
-  • Your Deck runs more Trainers (31 vs 19)
-```
-
-### Resumo de Múltiplos Matchups
-
-Quando você compara contra vários decks:
-
-```
-╭───────────────────╮
-│ Matchup Summary   │
-╰───────────────────╯
-╭────────────────────┬────────────┬───────────╮
-│ Opponent           │ Similarity │ Result    │
-├────────────────────┼────────────┼───────────┤
-│ Lugia VSTAR        │        8%  │ Unfavored │
-│ Charizard ex       │       45%  │ Even      │
-│ Regidrago VSTAR    │       12%  │ Favored   │
-╰────────────────────┴────────────┴───────────╯
+@dataclass
+class MatchupData:
+    deck_a_id: str         # ID do deck A
+    deck_b_id: str         # ID do deck B
+    win_rate_a: float      # Win rate do deck A (0-100)
+    notes_en/pt: str       # Notas explicativas
 ```
 
-## Sugestão de Deck
+**Funções principais**:
+| Função | Descrição |
+|--------|-----------|
+| `get_matchup(deck_a, deck_b)` | Retorna dados de matchup entre dois decks |
+| `get_deck_matchups(deck_id)` | Retorna todos os matchups de um deck |
+| `calculate_meta_score(deck_id)` | Calcula pontuação ponderada pelo meta |
+| `get_best_deck_against(opponents)` | Encontra melhor deck contra lista de oponentes |
+| `get_tier_list(lang)` | Retorna decks organizados por tier |
+| `search_deck_by_pokemon(name)` | Busca decks que contêm um Pokemon |
+| `get_translation(key, lang)` | Retorna tradução de elemento UI |
 
-A funcionalidade de sugestão de deck permite buscar um Pokemon e receber sugestões de decks competitivos.
+**Dados incluídos**:
+- 8 decks completos com 60 cartas cada
+- 28 matchups com win rates e notas
+- Traduções para todas as strings de UI
 
-### Como Funciona
+---
 
-1. **Busca do Pokemon**: O sistema busca o Pokemon nas APIs (TCGdex e Pokemon TCG API)
-2. **Identificação de Coleções**: Mostra em quais sets o Pokemon aparece
-3. **Análise de Legalidade**: Indica se o Pokemon está legal, rotacionando ou já rotacionou
-4. **Sugestões de Deck**: Gera arquétipos de deck baseados nas características do Pokemon
+### `deck_suggest.py` - Sugestão de Deck
 
-### Exemplo de Saída
+**Descrição**: Motor de sugestão de deck que integra a base de dados do meta e APIs externas para recomendar decks baseados em Pokemon específicos.
 
-```
-╭─────────────────────────────╮
-│ Collections for Charizard   │
-╰─────────────────────────────╯
+**Classes principais**:
 
-              Available Sets
-╭──────────┬────────────────────┬───────┬────────────┬─────────────────────╮
-│ Set Code │ Set Name           │ Cards │ Regulation │ Status              │
-├──────────┼────────────────────┼───────┼────────────┼─────────────────────┤
-│ OBF      │ Obsidian Flames    │     3 │ G          │ Rotating March 2026 │
-│ MEW      │ Pokemon 151        │     2 │ G          │ Rotating March 2026 │
-│ PAF      │ Paldean Fates      │     1 │ G          │ Rotating March 2026 │
-╰──────────┴────────────────────┴───────┴────────────┴─────────────────────╯
+```python
+@dataclass
+class PokemonInfo:
+    name: str              # Nome do Pokemon
+    set_code: str          # Código do set
+    number: str            # Número da carta
+    regulation_mark: str   # Mark de regulação (G, H, I)
+    types: list[str]       # Tipos (Fire, Water, etc.)
+    hp: int                # Pontos de vida
+    is_ex/is_v/is_vstar/is_vmax: bool  # Variantes
+    attacks: list[dict]    # Lista de ataques
+    abilities: list[dict]  # Lista de habilidades
 
-Card Variants:
-  • Charizard ex (OBF 125) ex Fire HP 330
-  • Charizard (OBF 26) Fire HP 170
-  • Charizard ex (MEW 6) ex Fire HP 330
+@dataclass
+class DeckSuggestion:
+    archetype_name: str    # Nome do arquétipo
+    description: str       # Descrição do deck
+    pokemon: PokemonInfo   # Pokemon principal
+    strategy: str          # Estratégia de jogo
+    key_cards: list[str]   # Cartas essenciais
+    energy_types: list[str]# Tipos de energia
+    strengths: list[str]   # Pontos fortes
+    weaknesses: list[str]  # Pontos fracos
+    difficulty: str        # Nível de dificuldade
 
-╭─────────────────────────────────────╮
-│ Deck Suggestions for Charizard      │
-╰─────────────────────────────────────╯
-
-╭─────────────── Suggestion #1 ────────────────╮
-│ Charizard ex / Arcanine                      │
-│ A Fire-type deck featuring Charizard ex      │
-│                                              │
-│ Difficulty: Beginner                         │
-╰──────────────────────────────────────────────╯
-
-Main Attacker: Charizard ex
-  Set: OBF 125
-  Regulation: G (Rotating March 2026)
-  HP: 330
-  Type: Fire
-
-Strategy: Aggressive damage with Fire-type acceleration
-
-         Key Cards
-╭───────────────────────╮
-│ 4 Charizard ex        │
-│ 4 Charizard (Basic)   │
-│ 4 Rare Candy          │
-│ 4 Ultra Ball          │
-│ 4 Nest Ball           │
-│ 4 Iono                │
-│ 4 Arven               │
-│ 2 Boss's Orders       │
-│ 2-4 Magma Basin       │
-╰───────────────────────╯
-
-Energy:
-  • Basic Fire Energy
-
-╭───────────────────────────────┬─────────────────────────────────╮
-│ Strengths                     │ Weaknesses                      │
-├───────────────────────────────┼─────────────────────────────────┤
-│ Strong against Grass/Metal    │ Weak to Water                   │
-│ Good energy acceleration      │ Energy intensive                │
-│ High HP (330)                 │ Gives 2 prize cards when KO'd   │
-╰───────────────────────────────┴─────────────────────────────────╯
+@dataclass
+class MetaDeckSuggestion:
+    deck: MetaDeck         # Deck do meta
+    relevance_score: float # Relevância para busca (0-100)
+    meta_score: float      # Viabilidade no meta
+    matchups: list[tuple]  # Lista de matchups
 ```
 
-### Tipos de Pokemon Suportados
+**Funções principais**:
+| Função | Descrição |
+|--------|-----------|
+| `suggest_meta_deck_for_pokemon(name, lang)` | Busca decks do meta com Pokemon |
+| `get_top_meta_decks(limit, lang)` | Retorna top decks do meta |
+| `get_deck_counter(deck_id, lang)` | Encontra melhor counter |
+| `suggest_deck_for_pokemon(name)` | Sugestão genérica por tipo |
+| `find_pokemon_cards(name)` | Busca Pokemon nas APIs |
+| `get_pokemon_collections(name)` | Agrupa por set/coleção |
+| `get_legal_status(reg_mark, lang)` | Status de legalidade |
+| `format_deck_suggestion_bilingual()` | Formata para exibição |
 
-| Tipo | Parceiros Comuns | Estratégia |
-|------|------------------|------------|
-| Fire | Arcanine, Entei, Magcargo | Aceleração de energia agressiva |
-| Water | Palkia, Kyogre, Greninja | Controle e sinergias Water |
-| Lightning | Pikachu, Miraidon, Regieleki | Aceleração rápida de energia |
-| Psychic | Gardevoir, Mewtwo, Mew | Manipulação de energia Psychic |
-| Fighting | Lucario, Machamp, Buzzwole | Dano alto com bônus Fighting |
-| Darkness | Darkrai, Zoroark, Umbreon | Aceleração Dark e controle |
-| Metal | Dialga, Metagross, Archaludon | Pokemon tanques com recuperação |
-| Dragon | Rayquaza, Dragonite, Regidrago | Dano alto com energia multi-tipo |
-| Grass | Sceptile, Venusaur, Decidueye | Cura e eficiência de energia |
-| Colorless | Lugia, Pidgeot, Archeops | Flexível com qualquer energia |
+**Arquétipos suportados**:
+| Tipo | Parceiros | Estratégia |
+|------|-----------|------------|
+| Fire | Arcanine, Entei | Aceleração agressiva |
+| Water | Palkia, Kyogre | Controle e sinergia |
+| Lightning | Miraidon, Regieleki | Energia rápida |
+| Psychic | Gardevoir, Mew | Manipulação de energia |
+| Fighting | Lucario, Machamp | Dano alto |
+| Darkness | Darkrai, Zoroark | Controle e aceleração |
+| Metal | Dialga, Archaludon | Tanques com recuperação |
+| Dragon | Rayquaza, Regidrago | Dano multi-energia |
+| Grass | Sceptile, Venusaur | Cura e eficiência |
+| Colorless | Lugia, Archeops | Flexibilidade |
 
-### Níveis de Dificuldade
+---
 
-| Nível | Descrição |
-|-------|-----------|
-| **Beginner** | Decks ex/V simples, fáceis de jogar |
-| **Intermediate** | Decks VSTAR/VMAX com VSTAR Powers |
-| **Advanced** | Decks Stage 2, combos complexos |
+### `deck_parser.py` - Parser de Deck
 
-## Critérios de Substituição
+**Descrição**: Converte texto no formato PTCGO em estruturas de dados do sistema. Detecta automaticamente tipos de cartas e normaliza códigos de sets.
 
-Para rotação, as substituições são calculadas com três critérios:
+**Funcionalidades**:
+- Parse de formato PTCGO (Pokemon TCG Live export)
+- Detecção automática de tipo (Pokemon, Trainer, Energy)
+- Detecção de subtipo de Trainer (Supporter, Item, Stadium, Tool)
+- Normalização de códigos de set (OBF → sv3)
+- Suporte a comentários (# ou //)
+- Regex para parsing: `(\d+)\s+(.+?)\s+([A-Z]{2,4})\s+(\d+)`
 
+**Funções principais**:
+| Função | Descrição |
+|--------|-----------|
+| `parse_deck(text)` | Converte texto PTCGO em objeto Deck |
+| `parse_card_line(line)` | Parse de uma linha de carta |
+| `detect_card_type(name)` | Detecta Pokemon/Trainer/Energy |
+| `detect_trainer_subtype(name)` | Detecta Supporter/Item/Stadium |
+| `normalize_set_code(code)` | Normaliza código do set |
+
+**Keywords para detecção de Trainer**:
+```python
+SUPPORTER_KEYWORDS = ["professor", "boss", "iono", "arven", "cynthia", ...]
+ITEM_KEYWORDS = ["ball", "candy", "catcher", "switch", "rod", ...]
+STADIUM_KEYWORDS = ["stadium", "tower", "gym", "basin", "temple", ...]
+TOOL_KEYWORDS = ["belt", "cape", "charm", "stone", "board", ...]
+```
+
+---
+
+### `rotation_checker.py` - Análise de Rotação
+
+**Descrição**: Analisa decks para identificar cartas afetadas pela rotação de março de 2026 (Regulation Mark G).
+
+**Classes principais**:
+
+```python
+@dataclass
+class RotationReport:
+    rotating_pokemon: list[Card]   # Pokemon rotacionando
+    rotating_trainers: list[Card]  # Trainers rotacionando
+    rotating_energy: list[Card]    # Energias rotacionando
+    safe_pokemon: list[Card]       # Pokemon seguros
+    safe_trainers: list[Card]      # Trainers seguros
+    safe_energy: list[Card]        # Energias seguras
+    illegal_pokemon: list[Card]    # Já ilegais
+    illegal_trainers: list[Card]   # Já ilegais
+    illegal_energy: list[Card]     # Já ilegais
+```
+
+**Funções principais**:
+| Função | Descrição |
+|--------|-----------|
+| `analyze_rotation(deck)` | Gera relatório de rotação completo |
+| `get_rotation_summary(report)` | Resumo com % e severidade |
+| `is_rotating(card)` | Verifica se carta rotaciona (mark G) |
+| `is_illegal(card)` | Verifica se já é ilegal (mark ≤ F) |
+| `is_safe(card)` | Verifica se é segura (mark ≥ H) |
+
+**Níveis de severidade**:
+| Severidade | % de Impacto |
+|------------|--------------|
+| NONE | 0% |
+| LOW | 1-20% |
+| MODERATE | 21-40% |
+| HIGH | 41-60% |
+| CRITICAL | 61%+ |
+
+---
+
+### `deck_compare.py` - Comparação de Decks
+
+**Descrição**: Compara dois decks identificando cartas em comum, diferenças e análise de matchup baseada em tipos e composição.
+
+**Classes principais**:
+
+```python
+@dataclass
+class DeckComparison:
+    deck_a_name: str              # Nome do deck A
+    deck_b_name: str              # Nome do deck B
+    shared_cards: list[tuple]     # Cartas em comum
+    unique_to_a: list[Card]       # Cartas únicas de A
+    unique_to_b: list[Card]       # Cartas únicas de B
+    similarity_percentage: float  # % de similaridade
+
+@dataclass
+class MatchupAnalysis:
+    deck_a_name: str              # Nome do deck A
+    deck_b_name: str              # Nome do deck B
+    matchup_favor: str            # Quem é favorecido
+    a_advantages: list[str]       # Vantagens de A
+    b_advantages: list[str]       # Vantagens de B
+    key_differences: list[str]    # Diferenças principais
+```
+
+**Funções principais**:
+| Função | Descrição |
+|--------|-----------|
+| `compare_decks(deck_a, deck_b)` | Compara estrutura dos decks |
+| `analyze_matchup(deck_a, deck_b)` | Analisa vantagens de matchup |
+| `get_main_attackers(deck)` | Identifica atacantes principais |
+| `get_type_advantages(attacker, defender)` | Calcula vantagem de tipo |
+
+**Tabela de vantagens de tipo**:
+```python
+TYPE_WEAKNESSES = {
+    "Fire": ["Water"],
+    "Water": ["Lightning", "Grass"],
+    "Grass": ["Fire"],
+    "Lightning": ["Fighting"],
+    "Fighting": ["Psychic"],
+    "Psychic": ["Darkness"],
+    "Darkness": ["Fighting", "Grass"],
+    "Metal": ["Fire"],
+    "Dragon": ["Dragon", "Fairy"],
+    "Colorless": ["Fighting"],
+    "Fairy": ["Metal"],
+}
+```
+
+---
+
+### `substitution.py` - Substituição de Cartas
+
+**Descrição**: Encontra substituições para cartas que rotacionam, usando sistema de pontuação baseado em tipo, função e arquétipo.
+
+**Classes principais**:
+
+```python
+@dataclass
+class Substitution:
+    original_card: Card       # Carta original (rotacionando)
+    suggested_card: Card      # Carta substituta sugerida
+    match_score: float        # Pontuação de match (0-100)
+    reasons: list[str]        # Motivos da sugestão
+```
+
+**Sistema de pontuação**:
 | Critério | Peso | Descrição |
 |----------|------|-----------|
-| **Tipo/Subtipo** | 40% | Pokemon→Pokemon, Supporter→Supporter, Item→Item |
-| **Função** | 40% | Draw, Search, Recovery, Switching, etc. |
-| **Arquétipo** | 20% | Compatibilidade de tipo de energia |
+| Tipo/Subtipo | 40% | Pokemon→Pokemon, Supporter→Supporter |
+| Função | 40% | Draw, Search, Recovery, etc. |
+| Arquétipo | 20% | Compatibilidade de tipo de energia |
 
-### Funções Detectadas
+**Funções principais**:
+| Função | Descrição |
+|--------|-----------|
+| `find_substitutions(cards, new_set)` | Busca substituições em novo set |
+| `calculate_match_score(original, candidate)` | Calcula pontuação |
+| `generate_updated_deck(cards, subs)` | Gera deck atualizado |
+| `get_known_substitutions()` | Mapeamentos conhecidos |
 
-| Função | Palavras-chave | Exemplos |
-|--------|----------------|----------|
-| Draw | draw, draws | Professor's Research, Iono |
-| Search | search, look at, find | Ultra Ball, Nest Ball |
-| Recovery | discard pile, put back | Super Rod, Night Stretcher |
-| Switching | switch, retreat | Switch, Escape Rope |
-| Energy Accel | attach, energy to | Magma Basin, Earthen Vessel |
-| Disruption | opponent's hand | Iono, Roxanne |
-| Setup | evolve, put onto | Rare Candy, Buddy-Buddy Poffin |
-| Protection | prevent, can't be | Manaphy (ability) |
+**Funções detectadas**:
+```python
+class CardFunction(Enum):
+    DRAW       # Compra de cartas
+    SEARCH     # Busca no deck
+    RECOVERY   # Recuperação do descarte
+    SWITCHING  # Troca de Pokemon ativo
+    ENERGY_ACCEL  # Aceleração de energia
+    DISRUPTION # Disrupção do oponente
+    SETUP      # Setup/evolução
+    PROTECTION # Proteção
+    DAMAGE     # Dano
+    HEALING    # Cura
+```
+
+---
+
+### `card_api.py` - Integração com APIs
+
+**Descrição**: Interface com APIs externas (TCGdex e Pokemon TCG API) para buscar dados de cartas, sets e imagens.
+
+**APIs utilizadas**:
+| API | URL Base | Uso | Idiomas |
+|-----|----------|-----|---------|
+| TCGdex | `https://api.tcgdex.net/v2` | Principal | 10+ |
+| Pokemon TCG | `https://api.pokemontcg.io/v2` | Fallback | Inglês |
+
+**Funções principais**:
+| Função | Descrição |
+|--------|-----------|
+| `fetch_card_tcgdex(set_code, number)` | Busca carta na TCGdex |
+| `fetch_card_pokemontcg(query)` | Busca na Pokemon TCG API |
+| `fetch_set_cards_tcgdex(set_code)` | Todas cartas de um set |
+| `search_pokemon_by_name(name)` | Busca Pokemon por nome |
+| `get_pokemon_details(name, set_code)` | Detalhes completos |
+| `parse_tcgdex_card(data)` | Converte JSON para Card |
+| `parse_pokemontcg_card(data)` | Converte JSON para Card |
+| `detect_functions(card)` | Detecta funções da carta |
+
+**Tratamento de erros**:
+- Timeout de 30-60 segundos
+- Fallback automático entre APIs
+- Cache local via SQLite
+
+---
+
+### `models.py` - Modelos de Dados
+
+**Descrição**: Define todas as estruturas de dados (dataclasses) usadas pelo sistema.
+
+**Classes principais**:
+
+```python
+class CardType(Enum):
+    POKEMON = "pokemon"
+    TRAINER = "trainer"
+    ENERGY = "energy"
+
+class CardFunction(Enum):
+    DRAW, SEARCH, RECOVERY, SWITCHING,
+    ENERGY_ACCEL, DAMAGE, HEALING, DISRUPTION,
+    SETUP, PROTECTION, OTHER
+
+@dataclass
+class Card:
+    name: str               # Nome da carta
+    card_type: CardType     # Tipo (Pokemon/Trainer/Energy)
+    set_code: str           # Código do set
+    set_number: str         # Número no set
+    quantity: int = 1       # Quantidade no deck
+    regulation_mark: str    # Mark de regulação
+    subtype: str            # Subtipo (ex, V, supporter, item)
+    hp: int                 # HP (para Pokemon)
+    energy_type: str        # Tipo de energia
+    abilities: str          # JSON das habilidades
+    attacks: str            # JSON dos ataques
+    functions: list[CardFunction]  # Funções detectadas
+
+@dataclass
+class Deck:
+    cards: list[Card]       # Lista de cartas
+    name: str = "My Deck"   # Nome do deck
+
+    @property
+    def total_cards(self) -> int
+    @property
+    def pokemon_count(self) -> int
+    @property
+    def trainer_count(self) -> int
+    @property
+    def energy_count(self) -> int
+    @property
+    def rotation_impact(self) -> float
+```
+
+---
+
+### `database.py` - Cache SQLite
+
+**Descrição**: Gerencia cache local de cartas usando SQLite para reduzir chamadas às APIs.
+
+**Schema do banco**:
+```sql
+-- Tabela de sets
+CREATE TABLE card_sets (
+    id INTEGER PRIMARY KEY,
+    code TEXT UNIQUE,      -- "OBF", "PAL"
+    name TEXT,             -- "Obsidian Flames"
+    series TEXT,           -- "Scarlet & Violet"
+    release_date TEXT,
+    regulation_mark TEXT   -- "G", "H", "I"
+);
+
+-- Tabela de cartas
+CREATE TABLE cards (
+    id INTEGER PRIMARY KEY,
+    name TEXT,
+    card_type TEXT,        -- "pokemon", "trainer", "energy"
+    subtype TEXT,          -- "supporter", "item", "stadium"
+    set_code TEXT,
+    set_number TEXT,
+    regulation_mark TEXT,
+    hp INTEGER,
+    energy_type TEXT,
+    abilities TEXT,        -- JSON
+    attacks TEXT,          -- JSON
+    image_url TEXT,
+    UNIQUE(set_code, set_number)
+);
+
+-- Índices
+CREATE INDEX idx_cards_regulation ON cards(regulation_mark);
+CREATE INDEX idx_cards_name ON cards(name);
+CREATE INDEX idx_cards_type ON cards(card_type);
+```
+
+**Funções principais**:
+| Função | Descrição |
+|--------|-----------|
+| `init_database()` | Inicializa banco se não existir |
+| `get_card(set_code, number)` | Busca carta no cache |
+| `save_card(card)` | Salva carta no cache |
+| `get_cards_by_regulation(mark)` | Cartas por regulation mark |
+| `get_cards_by_set(set_code)` | Cartas de um set |
+| `clear_cache()` | Limpa todo o cache |
+
+---
 
 ## Códigos de Sets Suportados
 
@@ -428,35 +840,11 @@ Para rotação, as substituições são calculadas com três critérios:
 | PRE | Prismatic Evolutions | I | Jan 2025 |
 | JTG | Journey Together | I | Mar 2025 |
 | ASC | Ascended Heroes | I | Mai 2025 |
+| DRI | Destined Rivals | I | Jul 2025 |
+| MEV | Mega Evolution | I | Sep 2025 |
 | SVE | Basic Energy | - | Sempre legal |
 
-### Sword & Shield Era (Referência)
-
-| Código | Set | Regulation |
-|--------|-----|------------|
-| BRS | Brilliant Stars | F |
-| ASR | Astral Radiance | F |
-| LOR | Lost Origin | F |
-| SIT | Silver Tempest | F |
-| CRZ | Crown Zenith | F |
-
-## Estrutura do Projeto
-
-```
-tcg_tool/
-├── main.py              # CLI principal com menu
-├── deck_parser.py       # Parser formato PTCGO
-├── rotation_checker.py  # Análise de rotação
-├── deck_compare.py      # Comparação de decks e matchups
-├── deck_suggest.py      # Sugestão de deck por Pokemon
-├── substitution.py      # Lógica de substituição
-├── card_api.py          # Integração TCGdex/Pokemon TCG API
-├── models.py            # Dataclasses (Card, Deck, Substitution)
-├── database.py          # SQLite para cache de cartas
-├── requirements.txt     # Dependências Python
-├── example_deck.txt     # Deck Charizard ex de exemplo
-└── example_opponent.txt # Deck Lugia VSTAR de exemplo
-```
+---
 
 ## APIs Utilizadas
 
@@ -465,13 +853,17 @@ tcg_tool/
 | **TCGdex** | Principal (10+ idiomas) | https://tcgdex.dev |
 | **Pokemon TCG API** | Fallback (inglês) | https://pokemontcg.io |
 
+---
+
 ## Limitações
 
 - A busca de substituições depende da disponibilidade das cartas na API
-- Sets futuros (como ASC - Ascended Heroes) podem não estar disponíveis até o lançamento
+- Sets futuros podem não estar disponíveis até o lançamento
 - A análise de função é baseada em palavras-chave e pode não ser 100% precisa
-- A análise de matchup é simplificada e não considera combos específicos ou meta-game
+- A análise de matchup do meta é baseada em dados da comunidade
 - Energias básicas são sempre consideradas legais
+
+---
 
 ## Contribuindo
 
@@ -480,6 +872,8 @@ tcg_tool/
 3. Commit suas mudanças
 4. Push para a branch
 5. Abra um Pull Request
+
+---
 
 ## Licença
 
