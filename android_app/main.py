@@ -2,6 +2,12 @@
 TCG Meta Analyzer - Android App
 Pokemon TCG competitive deck browser with matchup analysis
 """
+import sys
+import os
+
+# Add the script's directory to path for imports to work from any location
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.scrollview import ScrollView
