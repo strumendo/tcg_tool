@@ -122,6 +122,18 @@ android_app/
 
 ## Troubleshooting
 
+### Erro: "No module named 'distutils'" (Python 3.12+)
+
+```bash
+# Solução 1: Instalar setuptools
+pip install setuptools
+
+# Solução 2: Usar Python 3.10/3.11 (recomendado)
+python3.10 -m venv venv
+source venv/bin/activate
+pip install kivy buildozer cython
+```
+
 ### Erro: "SDK/NDK not found"
 
 ```bash
@@ -237,11 +249,13 @@ META_DECKS["novo_deck"] = MetaDeck(
 
 ## Versões Testadas
 
-- Python: 3.10+
+- **Python: 3.10 ou 3.11** (recomendado - Python 3.12+ tem problemas com distutils)
 - Kivy: 2.2.1
 - Buildozer: 1.5.0
 - Android API: 21-33
 - Arquiteturas: arm64-v8a, armeabi-v7a
+
+> **Nota:** Se estiver usando Python 3.12+, instale `setuptools` antes: `pip install setuptools`
 
 ## Licença
 
