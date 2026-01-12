@@ -21,7 +21,7 @@ Aplicativo Android para navegar pelos top decks competitivos de Pokemon TCG com 
 ### Dependências
 
 ```bash
-# Ubuntu/Debian
+# Ubuntu/Debian (22.04+)
 sudo apt update
 sudo apt install -y \
     python3-pip \
@@ -34,9 +34,8 @@ sudo apt install -y \
     libtool \
     pkg-config \
     zlib1g-dev \
-    libncurses5-dev \
-    libncursesw5-dev \
-    libtinfo5 \
+    libncurses-dev \
+    libtinfo6 \
     cmake \
     libffi-dev \
     libssl-dev \
@@ -52,7 +51,7 @@ source venv/bin/activate
 
 # Instalar Kivy e Buildozer
 pip install --upgrade pip
-pip install kivy buildozer cython
+pip install setuptools kivy buildozer cython
 
 # Verificar instalação
 buildozer --version
