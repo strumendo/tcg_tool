@@ -20,6 +20,7 @@ from kivy.uix.label import Label
 from kivy.uix.textinput import TextInput
 from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
 from kivy.uix.widget import Widget
+from kivy.uix.image import AsyncImage
 from kivy.core.window import Window
 from kivy.metrics import dp, sp
 from kivy.utils import get_color_from_hex, platform
@@ -53,6 +54,78 @@ COLORS = {
     'tier2': '#ffc107',
     'tier3': '#a0a0a0',
 }
+
+# Deck icons and card images for visual representation
+DECK_INFO = {
+    'gholdengo': {
+        'icon': '🪙',  # Gold coin for Gholdengo
+        'type_icon': '⚙️',  # Metal type
+        'color': '#B8B8D0',  # Metal color
+        'card_img': 'https://images.pokemontcg.io/sv4/139_hires.png',
+    },
+    'dragapult': {
+        'icon': '👻',  # Ghost for Dragapult
+        'type_icon': '🔮',  # Psychic type
+        'color': '#705898',  # Psychic color
+        'card_img': 'https://images.pokemontcg.io/sv6/130_hires.png',
+    },
+    'gardevoir': {
+        'icon': '🧚',  # Fairy-like for Gardevoir
+        'type_icon': '🔮',  # Psychic type
+        'color': '#F85888',  # Fairy/Psychic color
+        'card_img': 'https://images.pokemontcg.io/sv1/86_hires.png',
+    },
+    'charizard': {
+        'icon': '🔥',  # Fire for Charizard
+        'type_icon': '🔥',  # Fire type
+        'color': '#F08030',  # Fire color
+        'card_img': 'https://images.pokemontcg.io/sv3/125_hires.png',
+    },
+    'raging_bolt': {
+        'icon': '⚡',  # Lightning for Raging Bolt
+        'type_icon': '⚡',  # Electric type
+        'color': '#F8D030',  # Electric color
+        'card_img': 'https://images.pokemontcg.io/sv5/123_hires.png',
+    },
+    'grimmsnarl': {
+        'icon': '😈',  # Devil for Grimmsnarl
+        'type_icon': '🌙',  # Dark type
+        'color': '#705848',  # Dark color
+        'card_img': 'https://images.pokemontcg.io/sv6pt5/72_hires.png',
+    },
+    'joltik': {
+        'icon': '🕷️',  # Spider for Joltik
+        'type_icon': '⚡',  # Electric type
+        'color': '#F8D030',  # Electric color
+        'card_img': 'https://images.pokemontcg.io/sv3/63_hires.png',
+    },
+    'flareon': {
+        'icon': '🦊',  # Fox for Flareon
+        'type_icon': '🔥',  # Fire type
+        'color': '#F08030',  # Fire color
+        'card_img': 'https://images.pokemontcg.io/sv7/36_hires.png',
+    },
+}
+
+def get_deck_icon(deck_id):
+    """Get icon for a deck."""
+    info = DECK_INFO.get(deck_id, {})
+    return info.get('icon', '🎴')
+
+def get_deck_type_icon(deck_id):
+    """Get type icon for a deck."""
+    info = DECK_INFO.get(deck_id, {})
+    return info.get('type_icon', '⭐')
+
+def get_deck_color(deck_id):
+    """Get color for a deck based on type."""
+    info = DECK_INFO.get(deck_id, {})
+    return info.get('color', COLORS['secondary'])
+
+def get_deck_card_image(deck_id):
+    """Get main card image URL for a deck."""
+    info = DECK_INFO.get(deck_id, {})
+    return info.get('card_img', '')
 
 
 class ColoredBoxLayout(BoxLayout):
@@ -113,10 +186,11 @@ class HeaderWidget(ColoredBoxLayout):
 
         if show_back:
             back_btn = StyledButton(
-                text='←',
+                text='< Back',
                 size_hint=(None, 1),
-                width=dp(50),
-                bg_color=COLORS['card']
+                width=dp(80),
+                bg_color=COLORS['primary'],
+                font_size=sp(14)
             )
             if on_back:
                 back_btn.bind(on_press=on_back)
@@ -125,7 +199,7 @@ class HeaderWidget(ColoredBoxLayout):
         title_label = Label(
             text=f'[b]{title}[/b]',
             markup=True,
-            font_size=sp(20),
+            font_size=sp(18),
             color=get_color_from_hex(COLORS['text']),
             halign='center'
         )
@@ -133,7 +207,7 @@ class HeaderWidget(ColoredBoxLayout):
 
         if show_back:
             # Spacer to balance the back button
-            self.add_widget(Widget(size_hint=(None, 1), width=dp(50)))
+            self.add_widget(Widget(size_hint=(None, 1), width=dp(80)))
 
 
 class HomeScreen(Screen):
@@ -342,57 +416,78 @@ class MetaDecksScreen(Screen):
 
         for i, deck in enumerate(get_all_decks()[:8], 1):
             tier_color = COLORS[f'tier{deck.tier}'] if deck.tier <= 3 else COLORS['tier3']
+            deck_icon = get_deck_icon(deck.id)
+            type_icon = get_deck_type_icon(deck.id)
+            deck_color = get_deck_color(deck.id)
 
             card = CardWidget(
                 orientation='horizontal',
                 size_hint_y=None,
-                height=dp(90),
+                height=dp(100),
                 bg_color=COLORS['card']
             )
 
-            # Rank badge
-            rank_box = BoxLayout(size_hint_x=None, width=dp(50))
-            rank_label = Label(
-                text=f'[b]#{i}[/b]',
-                markup=True,
-                font_size=sp(24),
-                color=get_color_from_hex(tier_color)
+            # Icon box with Pokemon icon
+            icon_box = BoxLayout(orientation='vertical', size_hint_x=None, width=dp(60))
+            icon_label = Label(
+                text=deck_icon,
+                font_size=sp(32),
+                size_hint_y=0.6
             )
-            rank_box.add_widget(rank_label)
-            card.add_widget(rank_box)
+            type_label = Label(
+                text=type_icon,
+                font_size=sp(16),
+                size_hint_y=0.4
+            )
+            icon_box.add_widget(icon_label)
+            icon_box.add_widget(type_label)
+            card.add_widget(icon_box)
 
             # Deck info
-            info_box = BoxLayout(orientation='vertical', padding=[dp(10), 0])
+            info_box = BoxLayout(orientation='vertical', padding=[dp(5), 0])
 
+            # Deck name with rank
             name_label = Label(
-                text=f'[b]{deck.get_name(lang)}[/b]',
+                text=f'[b]#{i} {deck.get_name(lang)}[/b]',
                 markup=True,
-                font_size=sp(16),
-                color=get_color_from_hex(COLORS['text']),
+                font_size=sp(15),
+                color=get_color_from_hex(deck_color),
                 halign='left',
-                size_hint_y=0.5
+                size_hint_y=0.4
             )
             name_label.bind(size=name_label.setter('text_size'))
 
+            # Stats line
             diff_text = get_difficulty_translation(deck.difficulty, lang)
             stats_label = Label(
-                text=f'Tier {deck.tier} • {deck.meta_share:.1f}% • {diff_text}',
+                text=f'Tier {deck.tier} • {deck.meta_share:.1f}%',
                 font_size=sp(12),
-                color=get_color_from_hex(COLORS['text_secondary']),
+                color=get_color_from_hex(COLORS['text']),
                 halign='left',
-                size_hint_y=0.5
+                size_hint_y=0.3
             )
             stats_label.bind(size=stats_label.setter('text_size'))
 
+            # Difficulty
+            diff_label = Label(
+                text=diff_text,
+                font_size=sp(11),
+                color=get_color_from_hex(COLORS['text_secondary']),
+                halign='left',
+                size_hint_y=0.3
+            )
+            diff_label.bind(size=diff_label.setter('text_size'))
+
             info_box.add_widget(name_label)
             info_box.add_widget(stats_label)
+            info_box.add_widget(diff_label)
             card.add_widget(info_box)
 
             # Arrow
             arrow_box = BoxLayout(size_hint_x=None, width=dp(30))
             arrow = Label(
-                text='›',
-                font_size=sp(30),
+                text='>',
+                font_size=sp(24),
                 color=get_color_from_hex(COLORS['text_secondary'])
             )
             arrow_box.add_widget(arrow)
@@ -432,23 +527,67 @@ class DeckDetailsScreen(Screen):
         self.header = HeaderWidget('Deck Details', on_back=self.go_back)
         main.add_widget(self.header)
 
+        # Deck icon and name header
+        self.deck_header = ColoredBoxLayout(
+            orientation='horizontal',
+            size_hint_y=None,
+            height=dp(80),
+            bg_color=COLORS['surface'],
+            padding=[dp(15), dp(10)]
+        )
+
+        # Icon
+        self.deck_icon_label = Label(
+            text='🎴',
+            font_size=sp(40),
+            size_hint_x=None,
+            width=dp(60)
+        )
+        self.deck_header.add_widget(self.deck_icon_label)
+
+        # Name and type
+        name_box = BoxLayout(orientation='vertical')
+        self.deck_name_label = Label(
+            text='[b]Deck Name[/b]',
+            markup=True,
+            font_size=sp(18),
+            color=get_color_from_hex(COLORS['text']),
+            halign='left',
+            size_hint_y=0.6
+        )
+        self.deck_name_label.bind(size=self.deck_name_label.setter('text_size'))
+        self.deck_type_label = Label(
+            text='Type',
+            font_size=sp(12),
+            color=get_color_from_hex(COLORS['text_secondary']),
+            halign='left',
+            size_hint_y=0.4
+        )
+        self.deck_type_label.bind(size=self.deck_type_label.setter('text_size'))
+        name_box.add_widget(self.deck_name_label)
+        name_box.add_widget(self.deck_type_label)
+        self.deck_header.add_widget(name_box)
+
+        main.add_widget(self.deck_header)
+
         # Tab buttons
         tab_container = ColoredBoxLayout(
             orientation='horizontal',
             size_hint_y=None,
-            height=dp(50),
+            height=dp(45),
             bg_color=COLORS['surface'],
             spacing=dp(5),
             padding=[dp(10), dp(5)]
         )
 
         self.tab_buttons = {}
-        tabs = [('Info', 'info'), ('Cards', 'cards'), ('Matchups', 'matchups')]
+        tabs = [('Info', 'info'), ('Cards', 'cards'), ('Image', 'image'), ('Matchups', 'matchups')]
 
         for text, tab_id in tabs:
             btn = StyledButton(
                 text=text,
-                bg_color=COLORS['primary'] if tab_id == 'info' else COLORS['card']
+                bg_color=COLORS['primary'] if tab_id == 'info' else COLORS['card'],
+                font_size=sp(13)
             )
             btn.tab_id = tab_id
             btn.bind(on_press=self.switch_tab)
@@ -457,8 +596,26 @@ class DeckDetailsScreen(Screen):
 
         main.add_widget(tab_container)
 
-        # Content area
+        # Content area - container for text or image
         self.content_scroll = ScrollView()
+        self.content_container = BoxLayout(
+            orientation='vertical',
+            size_hint_y=None,
+            padding=[dp(15), dp(15)]
+        )
+        self.content_container.bind(minimum_height=self.content_container.setter('height'))
+
+        # Card image (hidden by default)
+        self.card_image = AsyncImage(
+            source='',
+            size_hint_y=None,
+            height=dp(400),
+            allow_stretch=True,
+            keep_ratio=True
+        )
+        self.card_image.opacity = 0  # Hidden initially
+
+        # Text content
         self.content_label = Label(
             text='',
             markup=True,
@@ -466,11 +623,13 @@ class DeckDetailsScreen(Screen):
             color=get_color_from_hex(COLORS['text']),
             halign='left',
             valign='top',
-            size_hint_y=None,
-            padding=[dp(20), dp(20)]
+            size_hint_y=None
         )
         self.content_label.bind(texture_size=self._update_content_size)
-        self.content_scroll.add_widget(self.content_label)
+
+        self.content_container.add_widget(self.card_image)
+        self.content_container.add_widget(self.content_label)
+        self.content_scroll.add_widget(self.content_container)
         main.add_widget(self.content_scroll)
 
         self.add_widget(main)
@@ -484,9 +643,18 @@ class DeckDetailsScreen(Screen):
     def on_enter(self):
         app = App.get_running_app()
         deck_id = getattr(app, 'selected_deck_id', None)
+        lang = app.current_language
 
         if deck_id and deck_id in META_DECKS:
             self.current_deck = META_DECKS[deck_id]
+            deck = self.current_deck
+
+            # Update header with deck info
+            self.deck_icon_label.text = f"{get_deck_icon(deck.id)} {get_deck_type_icon(deck.id)}"
+            self.deck_name_label.text = f'[b]{deck.get_name(lang)}[/b]'
+            self.deck_name_label.color = get_color_from_hex(get_deck_color(deck.id))
+            self.deck_type_label.text = f'Tier {deck.tier} • {deck.meta_share:.1f}% • {", ".join(deck.energy_types)}'
+
             self.show_tab('info')
 
     def switch_tab(self, btn):
@@ -506,6 +674,18 @@ class DeckDetailsScreen(Screen):
 
         deck = self.current_deck
         lang = App.get_running_app().current_language
+
+        # Hide/show image based on tab
+        if tab_id == 'image':
+            self.card_image.opacity = 1
+            self.card_image.height = dp(450)
+            card_url = get_deck_card_image(deck.id)
+            if card_url:
+                self.card_image.source = card_url
+            self.content_label.text = f"\n[b]{get_deck_icon(deck.id)} {deck.get_name(lang)}[/b]\n\n[color={COLORS['text_secondary'][1:]}]Main card image from the deck.\nTap to view in full resolution.[/color]"
+        else:
+            self.card_image.opacity = 0
+            self.card_image.height = 0
 
         if tab_id == 'info':
             self.show_info(deck, lang)
