@@ -39,6 +39,14 @@ Ferramenta CLI para analisar decks de Pokemon TCG, verificar o impacto da rotaç
 - Indicadores de favorecido/desfavorecido/equilibrado
 - Notas explicativas para cada matchup
 
+### 6. Aplicativo Android (NOVO)
+- **Navegue decks do meta** diretamente no celular
+- **Interface touch-friendly** com cards e botões grandes
+- **Funciona 100% offline** - dados embutidos no app
+- **Suporte bilíngue** - alternar entre Português e Inglês
+- **5 telas**: Home, Meta Decks, Detalhes, Matchups, Busca
+- Desenvolvido com **Kivy** para multiplataforma
+
 ---
 
 ## Instalação
@@ -238,6 +246,85 @@ Matchups:
 │ Flareon ex           │    25%   │ Unfavored  │ Flareon deals double damage │
 ╰──────────────────────┴──────────┴────────────┴─────────────────────────────╯
 ```
+╭─────────────────────────────────────────────────────────────────────────────╮
+│ Gholdengo ex                                                                │
+│ The #1 deck in the meta with incredible draw power and infinite damage      │
+│                                                                             │
+│ Tier: 1  |  Meta Share: 26.5%  |  Difficulty: Intermediate                  │
+╰─────────────────────────────────────────────────────────────────────────────╯
+
+Strategy:
+  Use Gholdengo ex's Coin Bonus ability to draw cards each turn...
+
+Key Pokemon: Gholdengo ex, Genesect ex, Gimmighoul
+Energy: Metal, Basic
+
+╭──────────────────────────────────────┬──────────────────────────────────────╮
+│ Strengths                            │ Weaknesses                           │
+├──────────────────────────────────────┼──────────────────────────────────────┤
+│ Highest damage ceiling in format     │ Weak to Fire (Flareon ex)            │
+│ Excellent draw power with Coin Bonus │ Needs many energy in hand            │
+│ Can OHKO any Pokemon                 │ Struggles against disruption         │
+╰──────────────────────────────────────┴──────────────────────────────────────╯
+
+Matchups:
+╭──────────────────────┬──────────┬────────────┬─────────────────────────────╮
+│ vs                   │ Win Rate │            │ Notes                       │
+├──────────────────────┼──────────┼────────────┼─────────────────────────────┤
+│ Charizard ex         │    60%   │ Favored    │ Can OHKO before setup       │
+│ Dragapult ex         │    55%   │ Favored    │ OHKO potential advantage    │
+│ Grimmsnarl ex        │    55%   │ Favored    │ Grimmsnarl lacks OHKOs      │
+│ Joltik Box           │    52%   │ Even       │ Higher damage ceiling       │
+│ Raging Bolt ex       │    50%   │ Even       │ Depends on who goes first   │
+│ Gardevoir ex         │    48%   │ Even       │ Playable with good exec     │
+│ Flareon ex           │    25%   │ Unfavored  │ Flareon deals double damage │
+╰──────────────────────┴──────────┴────────────┴─────────────────────────────╯
+```
+
+### Exemplo de Lista Completa (Bilíngue)
+
+**Inglês:**
+```
+Pokemon (16):
+  4 Gimmighoul PRE 86
+  3 Gholdengo ex PRE 164
+  2 Genesect ex JTG 51
+  ...
+
+Trainer (29):
+  4 Iono PAL 185
+  4 Arven OBF 186
+  ...
+
+Energy (15):
+  4 Basic Metal Energy SVE 8
+  ...
+
+Total: 60
+```
+
+**Português:**
+```
+Pokemon (16):
+  4 Gimmighoul PRE 86
+  3 Gholdengo ex PRE 164
+  2 Genesect ex JTG 51
+  ...
+
+Treinador (29):
+  4 Iono PAL 185
+  4 Arven OBF 186
+  2 Ordens do Chefe PAL 172
+  ...
+
+Energia (15):
+  4 Energia Metal Basica SVE 8
+  ...
+
+Total: 60
+```
+
+---
 
 ### Exemplo de Lista Completa (Bilíngue)
 
@@ -357,7 +444,12 @@ tcg_tool/
 ├── database.py          # SQLite para cache de cartas
 ├── requirements.txt     # Dependências Python
 ├── example_deck.txt     # Deck Charizard ex de exemplo
-└── example_opponent.txt # Deck Lugia VSTAR de exemplo
+├── example_opponent.txt # Deck Lugia VSTAR de exemplo
+└── android_app/         # Aplicativo Android (NOVO)
+    ├── main.py          # App Kivy principal
+    ├── meta_data.py     # Dados offline do meta
+    ├── buildozer.spec   # Configuração de build
+    └── README.md        # Instruções de build
 ```
 
 ---
@@ -817,6 +909,110 @@ CREATE INDEX idx_cards_type ON cards(card_type);
 | `get_cards_by_regulation(mark)` | Cartas por regulation mark |
 | `get_cards_by_set(set_code)` | Cartas de um set |
 | `clear_cache()` | Limpa todo o cache |
+
+---
+
+## Aplicativo Android
+
+O projeto inclui um aplicativo Android nativo desenvolvido com Kivy para navegar pelos decks do meta diretamente no celular.
+
+### Funcionalidades do App
+
+| Tela | Funcionalidade |
+|------|----------------|
+| **Home** | Menu principal com navegação e toggle de idioma |
+| **Meta Decks** | Lista dos top 8 decks com tier e meta share |
+| **Deck Details** | Detalhes completos + lista de 60 cartas |
+| **Matchups** | Matriz de win rates entre decks |
+| **Search** | Buscar decks por Pokemon |
+
+### Testar no Desktop (sem build)
+
+```bash
+cd android_app
+
+# Instalar Kivy
+pip install kivy
+
+# Executar
+python main.py
+```
+
+### Gerar APK (Android)
+
+#### Pré-requisitos (Ubuntu/Debian)
+
+```bash
+sudo apt update
+sudo apt install -y \
+    python3-pip python3-venv git zip unzip \
+    openjdk-17-jdk autoconf libtool pkg-config \
+    zlib1g-dev libncurses5-dev libncursesw5-dev \
+    libtinfo5 cmake libffi-dev libssl-dev automake
+```
+
+#### Build do APK
+
+```bash
+cd android_app
+
+# Criar ambiente virtual
+python3 -m venv venv
+source venv/bin/activate
+
+# Instalar dependências
+pip install kivy buildozer cython
+
+# Gerar APK (primeira build demora ~30 min)
+buildozer android debug
+
+# APK gerado em: bin/tcgmeta-1.0.0-arm64-v8a_armeabi-v7a-debug.apk
+```
+
+### Instalar no Celular
+
+#### Via ADB (USB)
+
+```bash
+# Habilite "Depuração USB" no Android
+adb install bin/tcgmeta-*.apk
+```
+
+#### Via Transferência
+
+1. Copie o arquivo `.apk` para o celular
+2. Abra com gerenciador de arquivos
+3. Permita instalação de "fontes desconhecidas"
+
+### Estrutura do App
+
+```
+android_app/
+├── main.py           # App Kivy com 5 telas
+├── meta_data.py      # Dados offline (8 decks completos)
+├── buildozer.spec    # Configuração Android
+└── README.md         # Documentação detalhada
+```
+
+### Customização
+
+**Alterar cores** (em `main.py`):
+```python
+get_color_from_hex('#2196F3')  # Azul (header/botões)
+get_color_from_hex('#4CAF50')  # Verde (favorecido)
+get_color_from_hex('#F44336')  # Vermelho (desfavorecido)
+```
+
+**Adicionar novos decks** (em `meta_data.py`):
+```python
+META_DECKS["novo_deck"] = MetaDeck(
+    id="novo_deck",
+    name_en="New Deck",
+    name_pt="Novo Deck",
+    tier=2,
+    # ... campos restantes
+)
+```
 
 ---
 
