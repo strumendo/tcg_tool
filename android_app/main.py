@@ -1,6 +1,7 @@
 """
 TCG Meta Analyzer - Android App
 Pokemon TCG competitive deck browser with matchup analysis
+Optimized for Samsung Z Fold and other foldable devices
 """
 import sys
 import os
@@ -10,22 +11,24 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.gridlayout import GridLayout
+from kivy.uix.anchorlayout import AnchorLayout
 from kivy.uix.button import Button
 from kivy.uix.label import Label
 from kivy.uix.textinput import TextInput
-from kivy.uix.popup import Popup
-from kivy.uix.spinner import Spinner
-from kivy.uix.tabbedpanel import TabbedPanel, TabbedPanelItem
-from kivy.uix.screenmanager import ScreenManager, Screen
+from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
+from kivy.uix.widget import Widget
 from kivy.core.window import Window
-from kivy.metrics import dp
-from kivy.utils import get_color_from_hex
+from kivy.metrics import dp, sp
+from kivy.utils import get_color_from_hex, platform
+from kivy.graphics import Color, Rectangle, RoundedRectangle
 from kivy.clock import Clock
 
-# Set window size for testing on desktop
-Window.size = (400, 700)
+# Only set window size on desktop (not Android)
+if platform not in ('android', 'ios'):
+    Window.size = (420, 800)
 
 # Import meta database
 from meta_data import (
@@ -34,82 +37,272 @@ from meta_data import (
     get_translation, get_difficulty_translation
 )
 
+# Color scheme
+COLORS = {
+    'background': '#1a1a2e',
+    'surface': '#16213e',
+    'card': '#0f3460',
+    'primary': '#e94560',
+    'secondary': '#00d9ff',
+    'success': '#4ecca3',
+    'warning': '#ffc107',
+    'danger': '#ff6b6b',
+    'text': '#ffffff',
+    'text_secondary': '#a0a0a0',
+    'tier1': '#4ecca3',
+    'tier2': '#ffc107',
+    'tier3': '#a0a0a0',
+}
+
+
+class ColoredBoxLayout(BoxLayout):
+    """BoxLayout with background color support."""
+
+    def __init__(self, bg_color=None, **kwargs):
+        super().__init__(**kwargs)
+        self.bg_color = bg_color or COLORS['background']
+        with self.canvas.before:
+            Color(*get_color_from_hex(self.bg_color))
+            self.rect = Rectangle(pos=self.pos, size=self.size)
+        self.bind(pos=self._update_rect, size=self._update_rect)
+
+    def _update_rect(self, *args):
+        self.rect.pos = self.pos
+        self.rect.size = self.size
+
+
+class CardWidget(BoxLayout):
+    """A card-style widget with rounded corners and shadow effect."""
+
+    def __init__(self, bg_color=None, **kwargs):
+        super().__init__(**kwargs)
+        self.bg_color = bg_color or COLORS['card']
+        self.padding = dp(15)
+        with self.canvas.before:
+            Color(*get_color_from_hex(self.bg_color))
+            self.rect = RoundedRectangle(pos=self.pos, size=self.size, radius=[dp(10)])
+        self.bind(pos=self._update_rect, size=self._update_rect)
+
+    def _update_rect(self, *args):
+        self.rect.pos = self.pos
+        self.rect.size = self.size
+
+
+class StyledButton(Button):
+    """Modern styled button."""
+
+    def __init__(self, bg_color=None, **kwargs):
+        super().__init__(**kwargs)
+        self.background_normal = ''
+        self.background_color = get_color_from_hex(bg_color or COLORS['primary'])
+        self.color = get_color_from_hex(COLORS['text'])
+        self.font_size = sp(16)
+        self.bold = True
+
+
+class HeaderWidget(ColoredBoxLayout):
+    """Reusable header with back button and title."""
+
+    def __init__(self, title, show_back=True, on_back=None, **kwargs):
+        super().__init__(bg_color=COLORS['surface'], **kwargs)
+        self.orientation = 'horizontal'
+        self.size_hint_y = None
+        self.height = dp(60)
+        self.padding = [dp(10), dp(5)]
+        self.spacing = dp(10)
+
+        if show_back:
+            back_btn = StyledButton(
+                text='←',
+                size_hint=(None, 1),
+                width=dp(50),
+                bg_color=COLORS['card']
+            )
+            if on_back:
+                back_btn.bind(on_press=on_back)
+            self.add_widget(back_btn)
+
+        title_label = Label(
+            text=f'[b]{title}[/b]',
+            markup=True,
+            font_size=sp(20),
+            color=get_color_from_hex(COLORS['text']),
+            halign='center'
+        )
+        self.add_widget(title_label)
+
+        if show_back:
+            # Spacer to balance the back button
+            self.add_widget(Widget(size_hint=(None, 1), width=dp(50)))
+
 
 class HomeScreen(Screen):
     """Main home screen with menu options."""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.current_language = Language.EN
+        self.build_ui()
 
-        layout = BoxLayout(orientation='vertical', padding=dp(20), spacing=dp(15))
+    def build_ui(self):
+        # Main container with background
+        main = ColoredBoxLayout(orientation='vertical', bg_color=COLORS['background'])
 
-        # Header
-        header = Label(
-            text='[b]TCG Meta Analyzer[/b]\n[size=14]Pokemon TCG Deck Browser[/size]',
-            markup=True,
+        # Header area
+        header_container = ColoredBoxLayout(
+            orientation='vertical',
             size_hint_y=None,
-            height=dp(80),
+            height=dp(180),
+            bg_color=COLORS['surface'],
+            padding=[dp(20), dp(30)]
+        )
+
+        # App title
+        title = Label(
+            text='[b]TCG Meta[/b]\n[size=16sp]Analyzer[/size]',
+            markup=True,
+            font_size=sp(36),
+            color=get_color_from_hex(COLORS['primary']),
             halign='center',
-            color=get_color_from_hex('#00BCD4')
+            size_hint_y=0.7
         )
-        layout.add_widget(header)
+        title.bind(size=title.setter('text_size'))
+        header_container.add_widget(title)
 
-        # Language toggle
-        lang_layout = BoxLayout(size_hint_y=None, height=dp(50), spacing=dp(10))
-        lang_label = Label(text='Language:', size_hint_x=0.4)
-        self.lang_spinner = Spinner(
+        # Subtitle
+        subtitle = Label(
+            text='Pokemon TCG Competitive Meta Browser',
+            font_size=sp(14),
+            color=get_color_from_hex(COLORS['text_secondary']),
+            halign='center',
+            size_hint_y=0.3
+        )
+        header_container.add_widget(subtitle)
+
+        main.add_widget(header_container)
+
+        # Language selector
+        lang_container = ColoredBoxLayout(
+            orientation='horizontal',
+            size_hint_y=None,
+            height=dp(50),
+            bg_color=COLORS['background'],
+            padding=[dp(20), dp(5)],
+            spacing=dp(10)
+        )
+
+        self.lang_en_btn = StyledButton(
             text='English',
-            values=['English', 'Portugues'],
-            size_hint_x=0.6
+            size_hint_x=0.5,
+            bg_color=COLORS['primary']
         )
-        self.lang_spinner.bind(text=self.on_language_change)
-        lang_layout.add_widget(lang_label)
-        lang_layout.add_widget(self.lang_spinner)
-        layout.add_widget(lang_layout)
+        self.lang_en_btn.bind(on_press=lambda x: self.set_language(Language.EN))
 
-        # Menu buttons
-        buttons_data = [
-            ('Browse Meta Decks', 'meta'),
-            ('View Matchup Chart', 'matchups'),
-            ('Search Pokemon', 'search'),
-            ('Deck Details', 'details'),
+        self.lang_pt_btn = StyledButton(
+            text='Português',
+            size_hint_x=0.5,
+            bg_color=COLORS['card']
+        )
+        self.lang_pt_btn.bind(on_press=lambda x: self.set_language(Language.PT))
+
+        lang_container.add_widget(self.lang_en_btn)
+        lang_container.add_widget(self.lang_pt_btn)
+        main.add_widget(lang_container)
+
+        # Menu buttons container
+        menu_scroll = ScrollView(size_hint_y=1)
+        menu_container = GridLayout(
+            cols=1,
+            spacing=dp(15),
+            padding=[dp(20), dp(20)],
+            size_hint_y=None
+        )
+        menu_container.bind(minimum_height=menu_container.setter('height'))
+
+        # Menu items
+        menu_items = [
+            ('🎴  Browse Meta Decks', 'meta', COLORS['success'], 'View Top 8 competitive decks'),
+            ('⚔️  Matchup Chart', 'matchups', COLORS['warning'], 'Compare deck win rates'),
+            ('🔍  Search Pokemon', 'search', COLORS['secondary'], 'Find decks by Pokemon'),
         ]
 
-        for text, screen_name in buttons_data:
-            btn = Button(
-                text=text,
+        for text, screen, color, desc in menu_items:
+            card = CardWidget(
+                orientation='vertical',
                 size_hint_y=None,
-                height=dp(60),
-                background_color=get_color_from_hex('#2196F3'),
-                font_size=dp(18)
+                height=dp(100),
+                bg_color=COLORS['card']
             )
-            btn.screen_name = screen_name
-            btn.bind(on_press=self.go_to_screen)
-            layout.add_widget(btn)
 
-        # Spacer
-        layout.add_widget(Label(size_hint_y=1))
+            btn_content = BoxLayout(orientation='vertical')
+
+            btn_title = Label(
+                text=f'[b]{text}[/b]',
+                markup=True,
+                font_size=sp(18),
+                color=get_color_from_hex(color),
+                halign='left',
+                size_hint_y=0.6
+            )
+            btn_title.bind(size=btn_title.setter('text_size'))
+
+            btn_desc = Label(
+                text=desc,
+                font_size=sp(12),
+                color=get_color_from_hex(COLORS['text_secondary']),
+                halign='left',
+                size_hint_y=0.4
+            )
+            btn_desc.bind(size=btn_desc.setter('text_size'))
+
+            btn_content.add_widget(btn_title)
+            btn_content.add_widget(btn_desc)
+            card.add_widget(btn_content)
+
+            # Make the card clickable
+            card.screen_name = screen
+            card.bind(on_touch_down=self.on_card_touch)
+
+            menu_container.add_widget(card)
+
+        menu_scroll.add_widget(menu_container)
+        main.add_widget(menu_scroll)
 
         # Footer
-        footer = Label(
-            text='[size=12]January 2026 Meta[/size]',
-            markup=True,
+        footer = ColoredBoxLayout(
             size_hint_y=None,
-            height=dp(30),
-            color=get_color_from_hex('#888888')
+            height=dp(40),
+            bg_color=COLORS['surface'],
+            padding=[dp(20), dp(10)]
         )
-        layout.add_widget(footer)
+        footer_text = Label(
+            text='January 2026 Meta | v1.0',
+            font_size=sp(12),
+            color=get_color_from_hex(COLORS['text_secondary'])
+        )
+        footer.add_widget(footer_text)
+        main.add_widget(footer)
 
-        self.add_widget(layout)
+        self.add_widget(main)
 
-    def on_language_change(self, spinner, text):
-        self.current_language = Language.PT if text == 'Portugues' else Language.EN
+    def on_card_touch(self, card, touch):
+        if card.collide_point(*touch.pos):
+            if hasattr(card, 'screen_name'):
+                self.manager.transition = SlideTransition(direction='left')
+                self.manager.current = card.screen_name
+                return True
+        return False
+
+    def set_language(self, lang):
         app = App.get_running_app()
-        app.current_language = self.current_language
+        app.current_language = lang
 
-    def go_to_screen(self, button):
-        self.manager.current = button.screen_name
+        # Update button colors
+        if lang == Language.EN:
+            self.lang_en_btn.background_color = get_color_from_hex(COLORS['primary'])
+            self.lang_pt_btn.background_color = get_color_from_hex(COLORS['card'])
+        else:
+            self.lang_en_btn.background_color = get_color_from_hex(COLORS['card'])
+            self.lang_pt_btn.background_color = get_color_from_hex(COLORS['primary'])
 
 
 class MetaDecksScreen(Screen):
@@ -120,63 +313,108 @@ class MetaDecksScreen(Screen):
         self.build_ui()
 
     def build_ui(self):
-        layout = BoxLayout(orientation='vertical', padding=dp(10), spacing=dp(10))
+        main = ColoredBoxLayout(orientation='vertical', bg_color=COLORS['background'])
 
-        # Header with back button
-        header = BoxLayout(size_hint_y=None, height=dp(50))
-        back_btn = Button(text='< Back', size_hint_x=0.3)
-        back_btn.bind(on_press=self.go_back)
-        header.add_widget(back_btn)
-        header.add_widget(Label(text='[b]Top 8 Meta Decks[/b]', markup=True))
-        layout.add_widget(header)
+        # Header
+        header = HeaderWidget('Top 8 Meta Decks', on_back=self.go_back)
+        main.add_widget(header)
 
-        # Scrollable deck list
+        # Deck list
         scroll = ScrollView()
-        self.deck_grid = GridLayout(cols=1, spacing=dp(10), size_hint_y=None)
-        self.deck_grid.bind(minimum_height=self.deck_grid.setter('height'))
+        self.deck_container = GridLayout(
+            cols=1,
+            spacing=dp(10),
+            padding=[dp(15), dp(15)],
+            size_hint_y=None
+        )
+        self.deck_container.bind(minimum_height=self.deck_container.setter('height'))
+        scroll.add_widget(self.deck_container)
+        main.add_widget(scroll)
 
-        scroll.add_widget(self.deck_grid)
-        layout.add_widget(scroll)
-
-        self.add_widget(layout)
+        self.add_widget(main)
 
     def on_enter(self):
-        """Called when screen is displayed."""
         self.refresh_decks()
 
     def refresh_decks(self):
-        self.deck_grid.clear_widgets()
+        self.deck_container.clear_widgets()
         lang = App.get_running_app().current_language
 
         for i, deck in enumerate(get_all_decks()[:8], 1):
-            deck_btn = Button(
-                text=f"{i}. {deck.get_name(lang)}\n"
-                     f"Tier {deck.tier} | {deck.meta_share:.1f}% | {get_difficulty_translation(deck.difficulty, lang)}",
+            tier_color = COLORS[f'tier{deck.tier}'] if deck.tier <= 3 else COLORS['tier3']
+
+            card = CardWidget(
+                orientation='horizontal',
                 size_hint_y=None,
-                height=dp(80),
-                halign='left',
-                valign='middle',
-                text_size=(dp(350), None),
-                background_color=self.get_tier_color(deck.tier)
+                height=dp(90),
+                bg_color=COLORS['card']
             )
-            deck_btn.deck_id = deck.id
-            deck_btn.bind(on_press=self.show_deck_details)
-            self.deck_grid.add_widget(deck_btn)
 
-    def get_tier_color(self, tier):
-        colors = {
-            1: get_color_from_hex('#4CAF50'),  # Green
-            2: get_color_from_hex('#FFC107'),  # Amber
-            3: get_color_from_hex('#9E9E9E'),  # Gray
-        }
-        return colors.get(tier, get_color_from_hex('#2196F3'))
+            # Rank badge
+            rank_box = BoxLayout(size_hint_x=None, width=dp(50))
+            rank_label = Label(
+                text=f'[b]#{i}[/b]',
+                markup=True,
+                font_size=sp(24),
+                color=get_color_from_hex(tier_color)
+            )
+            rank_box.add_widget(rank_label)
+            card.add_widget(rank_box)
 
-    def show_deck_details(self, button):
-        app = App.get_running_app()
-        app.selected_deck_id = button.deck_id
-        self.manager.current = 'details'
+            # Deck info
+            info_box = BoxLayout(orientation='vertical', padding=[dp(10), 0])
+
+            name_label = Label(
+                text=f'[b]{deck.get_name(lang)}[/b]',
+                markup=True,
+                font_size=sp(16),
+                color=get_color_from_hex(COLORS['text']),
+                halign='left',
+                size_hint_y=0.5
+            )
+            name_label.bind(size=name_label.setter('text_size'))
+
+            diff_text = get_difficulty_translation(deck.difficulty, lang)
+            stats_label = Label(
+                text=f'Tier {deck.tier} • {deck.meta_share:.1f}% • {diff_text}',
+                font_size=sp(12),
+                color=get_color_from_hex(COLORS['text_secondary']),
+                halign='left',
+                size_hint_y=0.5
+            )
+            stats_label.bind(size=stats_label.setter('text_size'))
+
+            info_box.add_widget(name_label)
+            info_box.add_widget(stats_label)
+            card.add_widget(info_box)
+
+            # Arrow
+            arrow_box = BoxLayout(size_hint_x=None, width=dp(30))
+            arrow = Label(
+                text='›',
+                font_size=sp(30),
+                color=get_color_from_hex(COLORS['text_secondary'])
+            )
+            arrow_box.add_widget(arrow)
+            card.add_widget(arrow_box)
+
+            card.deck_id = deck.id
+            card.bind(on_touch_down=self.on_deck_touch)
+
+            self.deck_container.add_widget(card)
+
+    def on_deck_touch(self, card, touch):
+        if card.collide_point(*touch.pos):
+            if hasattr(card, 'deck_id'):
+                app = App.get_running_app()
+                app.selected_deck_id = card.deck_id
+                self.manager.transition = SlideTransition(direction='left')
+                self.manager.current = 'details'
+                return True
+        return False
 
     def go_back(self, *args):
+        self.manager.transition = SlideTransition(direction='right')
         self.manager.current = 'home'
 
 
@@ -188,318 +426,392 @@ class DeckDetailsScreen(Screen):
         self.build_ui()
 
     def build_ui(self):
-        layout = BoxLayout(orientation='vertical', padding=dp(10), spacing=dp(5))
+        main = ColoredBoxLayout(orientation='vertical', bg_color=COLORS['background'])
 
-        # Header with back button
-        header = BoxLayout(size_hint_y=None, height=dp(50))
-        back_btn = Button(text='< Back', size_hint_x=0.3)
-        back_btn.bind(on_press=self.go_back)
-        header.add_widget(back_btn)
-        self.title_label = Label(text='[b]Deck Details[/b]', markup=True)
-        header.add_widget(self.title_label)
-        layout.add_widget(header)
+        # Header (will be updated with deck name)
+        self.header = HeaderWidget('Deck Details', on_back=self.go_back)
+        main.add_widget(self.header)
 
-        # Tabbed content
-        self.tabs = TabbedPanel(do_default_tab=False)
+        # Tab buttons
+        tab_container = ColoredBoxLayout(
+            orientation='horizontal',
+            size_hint_y=None,
+            height=dp(50),
+            bg_color=COLORS['surface'],
+            spacing=dp(5),
+            padding=[dp(10), dp(5)]
+        )
 
-        # Info tab
-        self.info_tab = TabbedPanelItem(text='Info')
-        self.info_scroll = ScrollView()
-        self.info_content = Label(
+        self.tab_buttons = {}
+        tabs = [('Info', 'info'), ('Cards', 'cards'), ('Matchups', 'matchups')]
+
+        for text, tab_id in tabs:
+            btn = StyledButton(
+                text=text,
+                bg_color=COLORS['primary'] if tab_id == 'info' else COLORS['card']
+            )
+            btn.tab_id = tab_id
+            btn.bind(on_press=self.switch_tab)
+            self.tab_buttons[tab_id] = btn
+            tab_container.add_widget(btn)
+
+        main.add_widget(tab_container)
+
+        # Content area
+        self.content_scroll = ScrollView()
+        self.content_label = Label(
             text='',
             markup=True,
-            size_hint_y=None,
+            font_size=sp(14),
+            color=get_color_from_hex(COLORS['text']),
             halign='left',
             valign='top',
-            text_size=(dp(360), None)
-        )
-        self.info_content.bind(texture_size=self.info_content.setter('size'))
-        self.info_scroll.add_widget(self.info_content)
-        self.info_tab.add_widget(self.info_scroll)
-        self.tabs.add_widget(self.info_tab)
-
-        # Deck List tab
-        self.list_tab = TabbedPanelItem(text='Cards')
-        self.list_scroll = ScrollView()
-        self.list_content = Label(
-            text='',
-            markup=True,
             size_hint_y=None,
-            halign='left',
-            valign='top',
-            font_size=dp(12),
-            text_size=(dp(360), None)
+            padding=[dp(20), dp(20)]
         )
-        self.list_content.bind(texture_size=self.list_content.setter('size'))
-        self.list_scroll.add_widget(self.list_content)
-        self.list_tab.add_widget(self.list_scroll)
-        self.tabs.add_widget(self.list_tab)
+        self.content_label.bind(texture_size=self._update_content_size)
+        self.content_scroll.add_widget(self.content_label)
+        main.add_widget(self.content_scroll)
 
-        # Matchups tab
-        self.matchups_tab = TabbedPanelItem(text='Matchups')
-        self.matchups_scroll = ScrollView()
-        self.matchups_content = Label(
-            text='',
-            markup=True,
-            size_hint_y=None,
-            halign='left',
-            valign='top',
-            text_size=(dp(360), None)
-        )
-        self.matchups_content.bind(texture_size=self.matchups_content.setter('size'))
-        self.matchups_scroll.add_widget(self.matchups_content)
-        self.matchups_tab.add_widget(self.matchups_scroll)
-        self.tabs.add_widget(self.matchups_tab)
+        self.add_widget(main)
+        self.current_tab = 'info'
+        self.current_deck = None
 
-        layout.add_widget(self.tabs)
-        self.add_widget(layout)
+    def _update_content_size(self, *args):
+        self.content_label.height = self.content_label.texture_size[1] + dp(40)
+        self.content_label.text_size = (self.content_scroll.width - dp(40), None)
 
     def on_enter(self):
-        """Called when screen is displayed."""
         app = App.get_running_app()
         deck_id = getattr(app, 'selected_deck_id', None)
 
         if deck_id and deck_id in META_DECKS:
-            self.show_deck(META_DECKS[deck_id])
+            self.current_deck = META_DECKS[deck_id]
+            self.show_tab('info')
 
-    def show_deck(self, deck):
+    def switch_tab(self, btn):
+        self.show_tab(btn.tab_id)
+
+    def show_tab(self, tab_id):
+        self.current_tab = tab_id
+
+        # Update button colors
+        for tid, btn in self.tab_buttons.items():
+            btn.background_color = get_color_from_hex(
+                COLORS['primary'] if tid == tab_id else COLORS['card']
+            )
+
+        if not self.current_deck:
+            return
+
+        deck = self.current_deck
         lang = App.get_running_app().current_language
 
-        # Update title
-        self.title_label.text = f'[b]{deck.get_name(lang)}[/b]'
+        if tab_id == 'info':
+            self.show_info(deck, lang)
+        elif tab_id == 'cards':
+            self.show_cards(deck, lang)
+        elif tab_id == 'matchups':
+            self.show_matchups(deck, lang)
 
-        # Info tab content
-        diff_color = {'Beginner': '4CAF50', 'Intermediate': 'FFC107', 'Advanced': 'F44336'}
-        diff = deck.difficulty
-        color = diff_color.get(diff, 'FFFFFF')
+    def show_info(self, deck, lang):
+        diff_colors = {'Beginner': COLORS['success'], 'Intermediate': COLORS['warning'], 'Advanced': COLORS['danger']}
+        diff_color = diff_colors.get(deck.difficulty, COLORS['text'])
 
-        strengths = '\n'.join([f"  [color=4CAF50]+[/color] {s}" for s in deck.get_strengths(lang)])
-        weaknesses = '\n'.join([f"  [color=F44336]-[/color] {w}" for w in deck.get_weaknesses(lang)])
+        strengths = '\n'.join([f"  [color={COLORS['success'][1:]}]✓[/color] {s}" for s in deck.get_strengths(lang)])
+        weaknesses = '\n'.join([f"  [color={COLORS['danger'][1:]}]✗[/color] {w}" for w in deck.get_weaknesses(lang)])
 
-        info_text = f"""[b][size=18]{deck.get_name(lang)}[/size][/b]
+        text = f"""[size=24sp][b]{deck.get_name(lang)}[/b][/size]
+
+[color={COLORS['text_secondary'][1:]}]━━━━━━━━━━━━━━━━━━━━━━━━[/color]
 
 [b]Tier:[/b] {deck.tier}
 [b]Meta Share:[/b] {deck.meta_share:.1f}%
-[b]Difficulty:[/b] [color={color}]{get_difficulty_translation(diff, lang)}[/color]
+[b]Difficulty:[/b] [color={diff_color[1:]}]{get_difficulty_translation(deck.difficulty, lang)}[/color]
 
-[b]{get_translation('description', lang) if lang == Language.PT else 'Description'}:[/b]
+[color={COLORS['text_secondary'][1:]}]━━━━━━━━━━━━━━━━━━━━━━━━[/color]
+
+[b]Description[/b]
 {deck.get_description(lang)}
 
-[b]{get_translation('strategy', lang)}:[/b]
+[b]Strategy[/b]
 {deck.get_strategy(lang)}
 
-[b]Key Pokemon:[/b] {', '.join(deck.key_pokemon)}
-[b]Energy:[/b] {', '.join(deck.energy_types)}
+[color={COLORS['text_secondary'][1:]}]━━━━━━━━━━━━━━━━━━━━━━━━[/color]
 
-[b]{get_translation('strengths', lang)}:[/b]
+[b]Key Pokemon:[/b] {', '.join(deck.key_pokemon)}
+[b]Energy Types:[/b] {', '.join(deck.energy_types)}
+
+[color={COLORS['text_secondary'][1:]}]━━━━━━━━━━━━━━━━━━━━━━━━[/color]
+
+[b]Strengths[/b]
 {strengths}
 
-[b]{get_translation('weaknesses', lang)}:[/b]
+[b]Weaknesses[/b]
 {weaknesses}
 """
-        self.info_content.text = info_text
+        self.content_label.text = text
 
-        # Deck list tab content
+    def show_cards(self, deck, lang):
         pokemon = deck.get_pokemon()
         trainers = deck.get_trainers()
         energy = deck.get_energy()
 
-        pokemon_text = '\n'.join([f"  {c.quantity} {c.get_name(lang)} {c.set_code} {c.set_number}" for c in pokemon])
-        trainer_text = '\n'.join([f"  {c.quantity} {c.get_name(lang)} {c.set_code} {c.set_number}" for c in trainers])
-        energy_text = '\n'.join([f"  {c.quantity} {c.get_name(lang)} {c.set_code} {c.set_number}" for c in energy])
+        pokemon_text = '\n'.join([f"  {c.quantity}x {c.get_name(lang)} ({c.set_code} {c.set_number})" for c in pokemon])
+        trainer_text = '\n'.join([f"  {c.quantity}x {c.get_name(lang)} ({c.set_code} {c.set_number})" for c in trainers])
+        energy_text = '\n'.join([f"  {c.quantity}x {c.get_name(lang)} ({c.set_code} {c.set_number})" for c in energy])
 
-        list_text = f"""[b]Pokemon ({sum(c.quantity for c in pokemon)}):[/b]
+        text = f"""[size=20sp][b]Deck List[/b][/size]
+[color={COLORS['text_secondary'][1:]}]Total: {deck.total_cards()} cards[/color]
+
+[color={COLORS['text_secondary'][1:]}]━━━━━━━━━━━━━━━━━━━━━━━━[/color]
+
+[b][color={COLORS['success'][1:]}]Pokemon ({sum(c.quantity for c in pokemon)})[/color][/b]
 {pokemon_text}
 
-[b]{get_translation('trainer', lang)} ({sum(c.quantity for c in trainers)}):[/b]
+[color={COLORS['text_secondary'][1:]}]━━━━━━━━━━━━━━━━━━━━━━━━[/color]
+
+[b][color={COLORS['warning'][1:]}]Trainer ({sum(c.quantity for c in trainers)})[/color][/b]
 {trainer_text}
 
-[b]{get_translation('energy', lang)} ({sum(c.quantity for c in energy)}):[/b]
+[color={COLORS['text_secondary'][1:]}]━━━━━━━━━━━━━━━━━━━━━━━━[/color]
+
+[b][color={COLORS['secondary'][1:]}]Energy ({sum(c.quantity for c in energy)})[/color][/b]
 {energy_text}
-
-[b]Total: {deck.total_cards()} cards[/b]
 """
-        self.list_content.text = list_text
+        self.content_label.text = text
 
-        # Matchups tab content
+    def show_matchups(self, deck, lang):
         matchups = get_deck_matchups(deck.id)
-        matchup_lines = []
+
+        lines = [f"[size=20sp][b]Matchups[/b][/size]\n"]
+        lines.append(f"[color={COLORS['text_secondary'][1:]}]━━━━━━━━━━━━━━━━━━━━━━━━[/color]\n")
 
         for opp_id, win_rate, notes in matchups:
             opp_deck = META_DECKS.get(opp_id)
             if opp_deck:
                 if win_rate >= 55:
-                    color = '4CAF50'
-                    status = get_translation('favored', lang)
+                    color = COLORS['success']
+                    icon = '▲'
                 elif win_rate <= 45:
-                    color = 'F44336'
-                    status = get_translation('unfavored', lang)
+                    color = COLORS['danger']
+                    icon = '▼'
                 else:
-                    color = 'FFC107'
-                    status = get_translation('even', lang)
+                    color = COLORS['warning']
+                    icon = '●'
 
-                matchup = get_matchup(deck.id, opp_id)
-                notes_text = matchup.get_notes(lang) if matchup else ""
+                matchup_obj = get_matchup(deck.id, opp_id)
+                notes_text = matchup_obj.get_notes(lang) if matchup_obj else ""
 
-                matchup_lines.append(
-                    f"[b]vs {opp_deck.get_name(lang)}[/b]\n"
-                    f"  [color={color}]{win_rate:.0f}%[/color] - {status}\n"
-                    f"  [size=11]{notes_text}[/size]\n"
-                )
+                lines.append(f"\n[b]vs {opp_deck.get_name(lang)}[/b]")
+                lines.append(f"[color={color[1:]}]{icon} {win_rate:.0f}%[/color]")
+                if notes_text:
+                    lines.append(f"[color={COLORS['text_secondary'][1:]}][size=12sp]{notes_text}[/size][/color]")
+                lines.append("")
 
-        matchups_text = f"[b]{get_translation('matchups', lang)}:[/b]\n\n" + '\n'.join(matchup_lines)
-        self.matchups_content.text = matchups_text
+        self.content_label.text = '\n'.join(lines)
 
     def go_back(self, *args):
+        self.manager.transition = SlideTransition(direction='right')
         self.manager.current = 'meta'
 
 
 class MatchupsScreen(Screen):
-    """Screen showing matchup matrix."""
+    """Screen for comparing two decks."""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.build_ui()
 
     def build_ui(self):
-        layout = BoxLayout(orientation='vertical', padding=dp(10), spacing=dp(10))
+        main = ColoredBoxLayout(orientation='vertical', bg_color=COLORS['background'])
 
-        # Header with back button
-        header = BoxLayout(size_hint_y=None, height=dp(50))
-        back_btn = Button(text='< Back', size_hint_x=0.3)
-        back_btn.bind(on_press=self.go_back)
-        header.add_widget(back_btn)
-        header.add_widget(Label(text='[b]Matchup Chart[/b]', markup=True))
-        layout.add_widget(header)
+        # Header
+        header = HeaderWidget('Matchup Chart', on_back=self.go_back)
+        main.add_widget(header)
+
+        # Content
+        content = BoxLayout(
+            orientation='vertical',
+            padding=[dp(20), dp(20)],
+            spacing=dp(15)
+        )
 
         # Instructions
-        instructions = Label(
-            text='Select two decks to compare:',
+        instr = Label(
+            text='Select two decks to compare their matchup:',
+            font_size=sp(14),
+            color=get_color_from_hex(COLORS['text_secondary']),
             size_hint_y=None,
             height=dp(30)
         )
-        layout.add_widget(instructions)
+        content.add_widget(instr)
 
-        # Deck selectors
-        selector_layout = BoxLayout(size_hint_y=None, height=dp(50), spacing=dp(10))
-
+        # Deck selection
         decks = get_all_decks()[:8]
-        deck_names = [d.name_en for d in decks]
+        self.deck_names = {d.name_en: d for d in decks}
+        deck_list = ['-- Select Deck --'] + [d.name_en for d in decks]
 
-        self.deck_a_spinner = Spinner(
-            text='Select Deck 1',
-            values=deck_names
+        # Deck A selector
+        deck_a_box = CardWidget(size_hint_y=None, height=dp(70), bg_color=COLORS['card'])
+        deck_a_content = BoxLayout(orientation='vertical')
+        deck_a_label = Label(
+            text='Deck 1:',
+            font_size=sp(12),
+            color=get_color_from_hex(COLORS['text_secondary']),
+            size_hint_y=0.3,
+            halign='left'
         )
-        self.deck_b_spinner = Spinner(
-            text='Select Deck 2',
-            values=deck_names
-        )
+        deck_a_label.bind(size=deck_a_label.setter('text_size'))
 
-        selector_layout.add_widget(self.deck_a_spinner)
-        selector_layout.add_widget(self.deck_b_spinner)
-        layout.add_widget(selector_layout)
+        self.deck_a_btn = StyledButton(
+            text='-- Select Deck --',
+            size_hint_y=0.7,
+            bg_color=COLORS['surface']
+        )
+        self.deck_a_btn.deck_list = deck_list
+        self.deck_a_btn.current_idx = 0
+        self.deck_a_btn.bind(on_press=self.cycle_deck_a)
+
+        deck_a_content.add_widget(deck_a_label)
+        deck_a_content.add_widget(self.deck_a_btn)
+        deck_a_box.add_widget(deck_a_content)
+        content.add_widget(deck_a_box)
+
+        # VS label
+        vs_label = Label(
+            text='[b]VS[/b]',
+            markup=True,
+            font_size=sp(24),
+            color=get_color_from_hex(COLORS['primary']),
+            size_hint_y=None,
+            height=dp(40)
+        )
+        content.add_widget(vs_label)
+
+        # Deck B selector
+        deck_b_box = CardWidget(size_hint_y=None, height=dp(70), bg_color=COLORS['card'])
+        deck_b_content = BoxLayout(orientation='vertical')
+        deck_b_label = Label(
+            text='Deck 2:',
+            font_size=sp(12),
+            color=get_color_from_hex(COLORS['text_secondary']),
+            size_hint_y=0.3,
+            halign='left'
+        )
+        deck_b_label.bind(size=deck_b_label.setter('text_size'))
+
+        self.deck_b_btn = StyledButton(
+            text='-- Select Deck --',
+            size_hint_y=0.7,
+            bg_color=COLORS['surface']
+        )
+        self.deck_b_btn.deck_list = deck_list
+        self.deck_b_btn.current_idx = 0
+        self.deck_b_btn.bind(on_press=self.cycle_deck_b)
+
+        deck_b_content.add_widget(deck_b_label)
+        deck_b_content.add_widget(self.deck_b_btn)
+        deck_b_box.add_widget(deck_b_content)
+        content.add_widget(deck_b_box)
 
         # Compare button
-        compare_btn = Button(
-            text='Compare',
+        compare_btn = StyledButton(
+            text='Compare Matchup',
             size_hint_y=None,
             height=dp(50),
-            background_color=get_color_from_hex('#4CAF50')
+            bg_color=COLORS['success']
         )
         compare_btn.bind(on_press=self.compare_decks)
-        layout.add_widget(compare_btn)
+        content.add_widget(compare_btn)
 
         # Result area
-        self.result_scroll = ScrollView()
+        self.result_scroll = ScrollView(size_hint_y=1)
         self.result_label = Label(
             text='',
             markup=True,
-            size_hint_y=None,
-            halign='left',
+            font_size=sp(14),
+            color=get_color_from_hex(COLORS['text']),
+            halign='center',
             valign='top',
-            text_size=(dp(360), None)
+            size_hint_y=None
         )
-        self.result_label.bind(texture_size=self.result_label.setter('size'))
+        self.result_label.bind(texture_size=self._update_result_size)
         self.result_scroll.add_widget(self.result_label)
-        layout.add_widget(self.result_scroll)
+        content.add_widget(self.result_scroll)
 
-        # Legend
-        legend = Label(
-            text='[color=4CAF50]Green[/color]=Favored (55%+)  '
-                 '[color=FFC107]Yellow[/color]=Even  '
-                 '[color=F44336]Red[/color]=Unfavored',
-            markup=True,
-            size_hint_y=None,
-            height=dp(40),
-            font_size=dp(11)
-        )
-        layout.add_widget(legend)
+        main.add_widget(content)
+        self.add_widget(main)
 
-        self.add_widget(layout)
+    def _update_result_size(self, *args):
+        self.result_label.height = self.result_label.texture_size[1] + dp(20)
+        self.result_label.text_size = (self.result_scroll.width - dp(40), None)
+
+    def cycle_deck_a(self, btn):
+        btn.current_idx = (btn.current_idx + 1) % len(btn.deck_list)
+        btn.text = btn.deck_list[btn.current_idx]
+
+    def cycle_deck_b(self, btn):
+        btn.current_idx = (btn.current_idx + 1) % len(btn.deck_list)
+        btn.text = btn.deck_list[btn.current_idx]
 
     def compare_decks(self, *args):
         lang = App.get_running_app().current_language
 
-        deck_a_name = self.deck_a_spinner.text
-        deck_b_name = self.deck_b_spinner.text
+        name_a = self.deck_a_btn.text
+        name_b = self.deck_b_btn.text
 
-        if deck_a_name == 'Select Deck 1' or deck_b_name == 'Select Deck 2':
-            self.result_label.text = '[color=F44336]Please select both decks[/color]'
+        if name_a == '-- Select Deck --' or name_b == '-- Select Deck --':
+            self.result_label.text = f'[color={COLORS["danger"][1:]}]Please select both decks[/color]'
             return
 
-        if deck_a_name == deck_b_name:
-            self.result_label.text = '[color=F44336]Please select different decks[/color]'
+        if name_a == name_b:
+            self.result_label.text = f'[color={COLORS["danger"][1:]}]Please select different decks[/color]'
             return
 
-        # Find deck IDs
-        deck_a = None
-        deck_b = None
-        for deck in META_DECKS.values():
-            if deck.name_en == deck_a_name:
-                deck_a = deck
-            if deck.name_en == deck_b_name:
-                deck_b = deck
+        deck_a = self.deck_names.get(name_a)
+        deck_b = self.deck_names.get(name_b)
 
         if not deck_a or not deck_b:
-            self.result_label.text = '[color=F44336]Deck not found[/color]'
+            self.result_label.text = f'[color={COLORS["danger"][1:]}]Deck not found[/color]'
             return
 
         matchup = get_matchup(deck_a.id, deck_b.id)
         if not matchup:
-            self.result_label.text = '[color=FFC107]No matchup data available[/color]'
+            self.result_label.text = f'[color={COLORS["warning"][1:]}]No matchup data available[/color]'
             return
 
-        # Determine colors
         if matchup.win_rate_a >= 55:
-            color_a = '4CAF50'
-            color_b = 'F44336'
+            color_a, color_b = COLORS['success'], COLORS['danger']
+            winner = deck_a.get_name(lang)
         elif matchup.win_rate_a <= 45:
-            color_a = 'F44336'
-            color_b = '4CAF50'
+            color_a, color_b = COLORS['danger'], COLORS['success']
+            winner = deck_b.get_name(lang)
         else:
-            color_a = 'FFC107'
-            color_b = 'FFC107'
+            color_a = color_b = COLORS['warning']
+            winner = "Even matchup"
 
-        result_text = f"""[b][size=18]Matchup Analysis[/size][/b]
+        result = f"""[size=20sp][b]Matchup Result[/b][/size]
+
+[color={COLORS['text_secondary'][1:]}]━━━━━━━━━━━━━━━━━━━━[/color]
 
 [b]{deck_a.get_name(lang)}[/b]
-vs
+[size=36sp][color={color_a[1:]}]{matchup.win_rate_a:.0f}%[/color][/size]
+
+[size=16sp]vs[/size]
+
 [b]{deck_b.get_name(lang)}[/b]
+[size=36sp][color={color_b[1:]}]{matchup.win_rate_b:.0f}%[/color][/size]
 
-[size=24][color={color_a}]{matchup.win_rate_a:.0f}%[/color][/size] - [size=24][color={color_b}]{matchup.win_rate_b:.0f}%[/color][/size]
+[color={COLORS['text_secondary'][1:]}]━━━━━━━━━━━━━━━━━━━━[/color]
 
-[b]{get_translation('notes', lang)}:[/b]
+[b]Notes:[/b]
 {matchup.get_notes(lang)}
-
-[b]Deck A Strengths:[/b]
-{chr(10).join(['  + ' + s for s in deck_a.get_strengths(lang)[:3]])}
-
-[b]Deck B Strengths:[/b]
-{chr(10).join(['  + ' + s for s in deck_b.get_strengths(lang)[:3]])}
 """
-        self.result_label.text = result_text
+        self.result_label.text = result
 
     def go_back(self, *args):
+        self.manager.transition = SlideTransition(direction='right')
         self.manager.current = 'home'
 
 
@@ -511,95 +823,170 @@ class SearchScreen(Screen):
         self.build_ui()
 
     def build_ui(self):
-        layout = BoxLayout(orientation='vertical', padding=dp(10), spacing=dp(10))
+        main = ColoredBoxLayout(orientation='vertical', bg_color=COLORS['background'])
 
-        # Header with back button
-        header = BoxLayout(size_hint_y=None, height=dp(50))
-        back_btn = Button(text='< Back', size_hint_x=0.3)
-        back_btn.bind(on_press=self.go_back)
-        header.add_widget(back_btn)
-        header.add_widget(Label(text='[b]Search Pokemon[/b]', markup=True))
-        layout.add_widget(header)
+        # Header
+        header = HeaderWidget('Search Pokemon', on_back=self.go_back)
+        main.add_widget(header)
 
-        # Search input
-        search_layout = BoxLayout(size_hint_y=None, height=dp(50), spacing=dp(10))
+        # Search area
+        search_box = ColoredBoxLayout(
+            orientation='horizontal',
+            size_hint_y=None,
+            height=dp(60),
+            bg_color=COLORS['surface'],
+            padding=[dp(15), dp(10)],
+            spacing=dp(10)
+        )
+
         self.search_input = TextInput(
             hint_text='Enter Pokemon name...',
             multiline=False,
-            size_hint_x=0.7
+            size_hint_x=0.7,
+            font_size=sp(16),
+            background_color=get_color_from_hex(COLORS['card']),
+            foreground_color=get_color_from_hex(COLORS['text']),
+            hint_text_color=get_color_from_hex(COLORS['text_secondary']),
+            cursor_color=get_color_from_hex(COLORS['primary']),
+            padding=[dp(15), dp(12)]
         )
-        search_btn = Button(
-            text='Search',
+
+        search_btn = StyledButton(
+            text='🔍',
             size_hint_x=0.3,
-            background_color=get_color_from_hex('#4CAF50')
+            bg_color=COLORS['success']
         )
         search_btn.bind(on_press=self.do_search)
-        search_layout.add_widget(self.search_input)
-        search_layout.add_widget(search_btn)
-        layout.add_widget(search_layout)
+
+        search_box.add_widget(self.search_input)
+        search_box.add_widget(search_btn)
+        main.add_widget(search_box)
 
         # Results
         self.result_scroll = ScrollView()
-        self.result_grid = GridLayout(cols=1, spacing=dp(10), size_hint_y=None)
-        self.result_grid.bind(minimum_height=self.result_grid.setter('height'))
-        self.result_scroll.add_widget(self.result_grid)
-        layout.add_widget(self.result_scroll)
+        self.result_container = GridLayout(
+            cols=1,
+            spacing=dp(10),
+            padding=[dp(15), dp(15)],
+            size_hint_y=None
+        )
+        self.result_container.bind(minimum_height=self.result_container.setter('height'))
+        self.result_scroll.add_widget(self.result_container)
+        main.add_widget(self.result_scroll)
 
-        self.add_widget(layout)
+        self.add_widget(main)
 
     def do_search(self, *args):
         query = self.search_input.text.strip().lower()
         if not query:
             return
 
-        self.result_grid.clear_widgets()
+        self.result_container.clear_widgets()
         lang = App.get_running_app().current_language
 
         found = False
         for deck in META_DECKS.values():
+            match_reason = None
+
             # Check key pokemon
             for key_mon in deck.key_pokemon:
                 if query in key_mon.lower():
-                    self.add_result(deck, lang, f"Key Pokemon: {key_mon}")
-                    found = True
+                    match_reason = f"Key Pokemon: {key_mon}"
                     break
-            else:
+
+            if not match_reason:
                 # Check all cards
                 for card in deck.cards:
                     if card.card_type == "pokemon" and query in card.name_en.lower():
-                        self.add_result(deck, lang, f"Contains: {card.name_en}")
-                        found = True
+                        match_reason = f"Contains: {card.name_en}"
                         break
 
+            if match_reason:
+                found = True
+                self.add_result(deck, lang, match_reason)
+
         if not found:
-            self.result_grid.add_widget(
-                Label(
-                    text=f'No meta decks found with "{query}"',
-                    size_hint_y=None,
-                    height=dp(50)
-                )
+            no_result = Label(
+                text=f'No meta decks found with "[b]{query}[/b]"',
+                markup=True,
+                font_size=sp(14),
+                color=get_color_from_hex(COLORS['text_secondary']),
+                size_hint_y=None,
+                height=dp(60)
             )
+            self.result_container.add_widget(no_result)
 
     def add_result(self, deck, lang, reason):
-        btn = Button(
-            text=f"{deck.get_name(lang)}\n{reason}\nTier {deck.tier} | {deck.meta_share:.1f}%",
+        card = CardWidget(
+            orientation='horizontal',
             size_hint_y=None,
-            height=dp(80),
-            halign='left',
-            valign='middle',
-            text_size=(dp(350), None),
-            background_color=get_color_from_hex('#2196F3')
+            height=dp(90),
+            bg_color=COLORS['card']
         )
-        btn.deck_id = deck.id
-        btn.bind(on_press=self.show_deck)
-        self.result_grid.add_widget(btn)
 
-    def show_deck(self, button):
-        app = App.get_running_app()
-        app.selected_deck_id = button.deck_id
-        self.manager.current = 'details'
+        # Info
+        info_box = BoxLayout(orientation='vertical', padding=[dp(5), 0])
+
+        name_label = Label(
+            text=f'[b]{deck.get_name(lang)}[/b]',
+            markup=True,
+            font_size=sp(16),
+            color=get_color_from_hex(COLORS['text']),
+            halign='left',
+            size_hint_y=0.4
+        )
+        name_label.bind(size=name_label.setter('text_size'))
+
+        reason_label = Label(
+            text=f'[color={COLORS["success"][1:]}]{reason}[/color]',
+            markup=True,
+            font_size=sp(12),
+            halign='left',
+            size_hint_y=0.3
+        )
+        reason_label.bind(size=reason_label.setter('text_size'))
+
+        stats_label = Label(
+            text=f'Tier {deck.tier} • {deck.meta_share:.1f}%',
+            font_size=sp(12),
+            color=get_color_from_hex(COLORS['text_secondary']),
+            halign='left',
+            size_hint_y=0.3
+        )
+        stats_label.bind(size=stats_label.setter('text_size'))
+
+        info_box.add_widget(name_label)
+        info_box.add_widget(reason_label)
+        info_box.add_widget(stats_label)
+        card.add_widget(info_box)
+
+        # Arrow
+        arrow_box = BoxLayout(size_hint_x=None, width=dp(30))
+        arrow = Label(
+            text='›',
+            font_size=sp(30),
+            color=get_color_from_hex(COLORS['text_secondary'])
+        )
+        arrow_box.add_widget(arrow)
+        card.add_widget(arrow_box)
+
+        card.deck_id = deck.id
+        card.bind(on_touch_down=self.on_result_touch)
+
+        self.result_container.add_widget(card)
+
+    def on_result_touch(self, card, touch):
+        if card.collide_point(*touch.pos):
+            if hasattr(card, 'deck_id'):
+                app = App.get_running_app()
+                app.selected_deck_id = card.deck_id
+                self.manager.transition = SlideTransition(direction='left')
+                self.manager.current = 'details'
+                return True
+        return False
 
     def go_back(self, *args):
+        self.manager.transition = SlideTransition(direction='right')
         self.manager.current = 'home'
 
 
@@ -614,15 +1001,52 @@ class TCGMetaApp(App):
     def build(self):
         self.title = 'TCG Meta Analyzer'
 
-        # Screen manager
-        sm = ScreenManager()
+        # Set window background color
+        Window.clearcolor = get_color_from_hex(COLORS['background'])
+
+        # Screen manager with slide transitions
+        sm = ScreenManager(transition=SlideTransition())
         sm.add_widget(HomeScreen(name='home'))
         sm.add_widget(MetaDecksScreen(name='meta'))
         sm.add_widget(DeckDetailsScreen(name='details'))
         sm.add_widget(MatchupsScreen(name='matchups'))
         sm.add_widget(SearchScreen(name='search'))
 
+        # Bind to window resize for foldable devices
+        Window.bind(on_resize=self.on_window_resize)
+
         return sm
+
+    def on_window_resize(self, window, width, height):
+        """Handle window resize for foldable phones."""
+        if self.root:
+            # Schedule a layout refresh
+            Clock.schedule_once(lambda dt: self._refresh_current_screen(), 0.1)
+
+    def _refresh_current_screen(self):
+        if self.root:
+            current_screen = self.root.current_screen
+            if current_screen:
+                current_screen.do_layout()
+
+    def on_start(self):
+        """Called when the app starts."""
+        if platform == 'android':
+            try:
+                from android.runnable import run_on_ui_thread
+                from jnius import autoclass
+
+                @run_on_ui_thread
+                def set_window_flags():
+                    PythonActivity = autoclass('org.kivy.android.PythonActivity')
+                    activity = PythonActivity.mActivity
+                    window = activity.getWindow()
+                    if hasattr(window, 'setDecorFitsSystemWindows'):
+                        window.setDecorFitsSystemWindows(False)
+
+                set_window_flags()
+            except Exception as e:
+                print(f"Could not set Android window flags: {e}")
 
 
 if __name__ == '__main__':

@@ -51,7 +51,8 @@ requirements = python3,kivy
 
 # (list) Supported orientations
 # Valid options are: landscape, portrait, portrait-reverse or landscape-reverse
-orientation = portrait
+# Using 'all' for foldable devices like Samsung Z Fold
+orientation = portrait, landscape, portrait-reverse, landscape-reverse
 
 # (list) List of service to declare
 #services = NAME:ENTRYPOINT_TO_PY,NAME2:ENTRYPOINT2_TO_PY
@@ -247,7 +248,8 @@ android.enable_androidx = True
 #android.wakelock = False
 
 # (list) Android application meta-data to set (key=value format)
-#android.meta_data =
+# Added for foldable device support (Samsung Z Fold, etc.)
+android.meta_data = android.max_aspect=2.4, android.resizeableActivity=true
 
 # (list) Android library project to add (will be added in the
 # project.properties automatically.)

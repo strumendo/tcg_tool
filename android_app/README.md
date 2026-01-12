@@ -10,6 +10,7 @@ Aplicativo Android para navegar pelos top decks competitivos de Pokemon TCG com 
 - **Matchup Analysis**: Win rates e notas para cada confronto
 - **Pokemon Search**: Busque decks que contêm um Pokemon específico
 - **Bilingual**: Suporte completo para Português e Inglês
+- **Foldable Support**: Compatível com Samsung Z Fold e outros dispositivos dobráveis
 
 ## Requisitos para Build
 
@@ -21,7 +22,7 @@ Aplicativo Android para navegar pelos top decks competitivos de Pokemon TCG com 
 ### Dependências
 
 ```bash
-# Ubuntu/Debian
+# Ubuntu/Debian (22.04+)
 sudo apt update
 sudo apt install -y \
     python3-pip \
@@ -34,9 +35,8 @@ sudo apt install -y \
     libtool \
     pkg-config \
     zlib1g-dev \
-    libncurses5-dev \
-    libncursesw5-dev \
-    libtinfo5 \
+    libncurses-dev \
+    libtinfo6 \
     cmake \
     libffi-dev \
     libssl-dev \
@@ -52,7 +52,7 @@ source venv/bin/activate
 
 # Instalar Kivy e Buildozer
 pip install --upgrade pip
-pip install kivy buildozer cython
+pip install setuptools kivy buildozer cython
 
 # Verificar instalação
 buildozer --version
@@ -122,6 +122,18 @@ android_app/
 
 ## Troubleshooting
 
+### Erro: "No module named 'distutils'" (Python 3.12+)
+
+```bash
+# Solução 1: Instalar setuptools
+pip install setuptools
+
+# Solução 2: Usar Python 3.10/3.11 (recomendado)
+python3.10 -m venv venv
+source venv/bin/activate
+pip install kivy buildozer cython
+```
+
 ### Erro: "SDK/NDK not found"
 
 ```bash
@@ -155,6 +167,37 @@ buildozer android debug
 # Ver logs do app
 adb logcat | grep python
 ```
+
+### Erro: "No route to host" ao baixar Apache ANT
+
+```bash
+# Instalar ANT via apt em vez de download automático
+sudo apt install ant
+
+# Depois rode o build novamente
+buildozer android debug
+```
+
+### Erro: Cython/pyjnius "undeclared name: long"
+
+```bash
+# Usar Cython versão < 3.0
+pip install "Cython<3.0" --force-reinstall
+rm -rf .buildozer
+buildozer android debug
+```
+
+### App não renderiza corretamente em dispositivos dobráveis (Samsung Z Fold)
+
+O app já inclui suporte para dispositivos dobráveis. Se ainda houver problemas:
+
+1. Certifique-se de que está usando a versão mais recente do código
+2. Limpe o cache e rebuild:
+```bash
+rm -rf .buildozer
+buildozer android debug
+```
+3. No dispositivo, vá em Configurações > Apps > TCG Meta > permitir "Redimensionável em multi-janela"
 
 ## Build via GitHub Actions (CI/CD)
 
@@ -237,11 +280,21 @@ META_DECKS["novo_deck"] = MetaDeck(
 
 ## Versões Testadas
 
-- Python: 3.10+
+- **Python: 3.10 ou 3.11** (recomendado - Python 3.12+ tem problemas com distutils)
 - Kivy: 2.2.1
 - Buildozer: 1.5.0
 - Android API: 21-33
 - Arquiteturas: arm64-v8a, armeabi-v7a
+
+### Dispositivos Testados
+
+| Dispositivo | Status | Notas |
+|-------------|--------|-------|
+| Samsung Z Fold 6 | ✓ | Suporte completo para telas aberta/fechada |
+| Samsung Z Fold 5 | ✓ | Funciona em ambas orientações |
+| Outros Android | ✓ | Qualquer dispositivo Android 5.0+ |
+
+> **Nota:** Se estiver usando Python 3.12+, instale `setuptools` antes: `pip install setuptools`
 
 ## Licença
 

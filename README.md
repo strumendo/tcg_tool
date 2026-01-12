@@ -866,8 +866,8 @@ sudo apt update
 sudo apt install -y \
     python3-pip python3-venv git zip unzip \
     openjdk-17-jdk autoconf libtool pkg-config \
-    zlib1g-dev libncurses5-dev libncursesw5-dev \
-    libtinfo5 cmake libffi-dev libssl-dev automake
+    zlib1g-dev libncurses-dev libtinfo6 \
+    cmake libffi-dev libssl-dev automake
 ```
 
 #### Build do APK
@@ -880,7 +880,7 @@ python3 -m venv venv
 source venv/bin/activate
 
 # Instalar dependências
-pip install kivy buildozer cython
+pip install setuptools kivy buildozer cython
 
 # Gerar APK (primeira build demora ~30 min)
 buildozer android debug
