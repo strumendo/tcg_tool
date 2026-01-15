@@ -1,2 +1,5 @@
-httpx>=0.25.0
-rich>=13.0.0
+# HTTP client for API requests
+httpx>=0.28.0
+
+# Terminal UI formatting
+rich>=14.0.0
