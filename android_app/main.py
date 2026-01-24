@@ -84,10 +84,12 @@ COLORS = {
 }
 
 # Deck data with icons, card images and type info
+# Pokemon sprites from PokemonDB (https://pokemondb.net/sprites)
+# Using HOME sprites for Gen 1-8 and Scarlet-Violet sprites for Gen 9
 DECK_INFO = {
     'gholdengo': {
         'name': 'Gholdengo ex',
-        'icon_url': 'https://r2.limitlesstcg.net/pokemon/gen9/gholdengo.png',
+        'icon_url': 'https://img.pokemondb.net/sprites/scarlet-violet/normal/gholdengo.png',
         'card_url': 'https://images.pokemontcg.io/sv4/139_hires.png',
         'secondary_cards': [
             'https://images.pokemontcg.io/sv4/138_hires.png',  # Gimmighoul
@@ -98,7 +100,7 @@ DECK_INFO = {
     },
     'dragapult': {
         'name': 'Dragapult ex',
-        'icon_url': 'https://r2.limitlesstcg.net/pokemon/gen9/dragapult.png',
+        'icon_url': 'https://img.pokemondb.net/sprites/home/normal/dragapult.png',
         'card_url': 'https://images.pokemontcg.io/sv6/130_hires.png',
         'secondary_cards': [
             'https://images.pokemontcg.io/sv6/129_hires.png',  # Drakloak
@@ -109,7 +111,7 @@ DECK_INFO = {
     },
     'gardevoir': {
         'name': 'Gardevoir ex',
-        'icon_url': 'https://r2.limitlesstcg.net/pokemon/gen9/gardevoir.png',
+        'icon_url': 'https://img.pokemondb.net/sprites/home/normal/gardevoir.png',
         'card_url': 'https://images.pokemontcg.io/sv1/86_hires.png',
         'secondary_cards': [
             'https://images.pokemontcg.io/sv1/85_hires.png',  # Kirlia
@@ -120,7 +122,7 @@ DECK_INFO = {
     },
     'charizard': {
         'name': 'Charizard ex',
-        'icon_url': 'https://r2.limitlesstcg.net/pokemon/gen9/charizard.png',
+        'icon_url': 'https://img.pokemondb.net/sprites/home/normal/charizard.png',
         'card_url': 'https://images.pokemontcg.io/sv3/125_hires.png',
         'secondary_cards': [
             'https://images.pokemontcg.io/sv3/124_hires.png',  # Charmeleon
@@ -131,7 +133,7 @@ DECK_INFO = {
     },
     'raging_bolt': {
         'name': 'Raging Bolt ex',
-        'icon_url': 'https://r2.limitlesstcg.net/pokemon/gen9/raging-bolt.png',
+        'icon_url': 'https://img.pokemondb.net/sprites/scarlet-violet/normal/raging-bolt.png',
         'card_url': 'https://images.pokemontcg.io/sv5/123_hires.png',
         'secondary_cards': [
             'https://images.pokemontcg.io/sv5/64_hires.png',  # Ogerpon
@@ -141,7 +143,7 @@ DECK_INFO = {
     },
     'grimmsnarl': {
         'name': "Marnie's Grimmsnarl",
-        'icon_url': 'https://r2.limitlesstcg.net/pokemon/gen9/grimmsnarl.png',
+        'icon_url': 'https://img.pokemondb.net/sprites/home/normal/grimmsnarl.png',
         'card_url': 'https://images.pokemontcg.io/sv6pt5/72_hires.png',
         'secondary_cards': [
             'https://images.pokemontcg.io/sv6pt5/41_hires.png',  # Froslass
@@ -151,7 +153,7 @@ DECK_INFO = {
     },
     'joltik': {
         'name': 'Joltik Box',
-        'icon_url': 'https://r2.limitlesstcg.net/pokemon/gen9/galvantula.png',
+        'icon_url': 'https://img.pokemondb.net/sprites/home/normal/galvantula.png',
         'card_url': 'https://images.pokemontcg.io/sv3/63_hires.png',
         'secondary_cards': [
             'https://images.pokemontcg.io/sv3/64_hires.png',  # Galvantula
@@ -161,7 +163,7 @@ DECK_INFO = {
     },
     'flareon': {
         'name': 'Flareon ex',
-        'icon_url': 'https://r2.limitlesstcg.net/pokemon/gen9/flareon.png',
+        'icon_url': 'https://img.pokemondb.net/sprites/home/normal/flareon.png',
         'card_url': 'https://images.pokemontcg.io/sv7/36_hires.png',
         'secondary_cards': [
             'https://images.pokemontcg.io/sv7/35_hires.png',  # Eevee
