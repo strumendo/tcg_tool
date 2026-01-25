@@ -27,6 +27,14 @@ from meta_database import (
     get_tier_list, get_translation, get_difficulty_translation
 )
 from models import CardType
+from deck_builder import (
+    DeckBuilderState, DeckBuilderCard, AbilityCategory,
+    add_pokemon_to_deck, add_trainer_to_deck, add_energy_to_deck,
+    remove_card_from_deck, analyze_all_matchups, generate_all_guides,
+    calculate_overall_meta_score, get_deck_summary, get_matchup_display,
+    get_guide_display, suggest_cards_for_deck, POKEMON_DATABASE,
+    search_pokemon, get_all_ability_categories, ABILITY_DESCRIPTIONS
+)
 
 
 # Current language setting
@@ -59,6 +67,7 @@ def print_menu():
     console.print("  [cyan]4[/cyan] - Suggest deck for a Pokemon")
     console.print("  [cyan]5[/cyan] - Browse Meta Decks (Top 8)")
     console.print("  [cyan]6[/cyan] - View Meta Matchups")
+    console.print("  [cyan]7[/cyan] - [bold green]Deck Builder[/bold green] (Build + Matchups + Guides)")
     console.print(f"  [cyan]L[/cyan] - Toggle Language (Current: [yellow]{lang_label}[/yellow])")
     console.print("  [cyan]q[/cyan] - Quit")
     console.print()
@@ -962,8 +971,573 @@ def run_deck_comparison(deck_a, name_a: str):
         console.print()
 
 
+def run_deck_builder():
+    """Run the interactive deck builder with real-time matchup analysis."""
+    global CURRENT_LANGUAGE
+
+    console.print()
+    title = "Deck Builder" if CURRENT_LANGUAGE == Language.EN else "Construtor de Deck"
+    subtitle = "Build your deck and see real-time matchup analysis" if CURRENT_LANGUAGE == Language.EN else "Construa seu deck e veja analise de matchups em tempo real"
+    console.print(Panel.fit(f"[bold cyan]{title}[/bold cyan]\n[dim]{subtitle}[/dim]", border_style="cyan"))
+    console.print()
+
+    # Initialize deck builder state
+    deck = DeckBuilderState()
+    deck_name_prompt = "Enter deck name" if CURRENT_LANGUAGE == Language.EN else "Digite o nome do deck"
+    deck.deck_name = Prompt.ask(deck_name_prompt, default="My Custom Deck")
+
+    while True:
+        # Show current deck status
+        console.print(f"\n{'=' * 60}")
+        console.print(f"[bold]{deck.deck_name}[/bold]")
+        console.print(f"{'=' * 60}")
+
+        total = deck.total_cards
+        if total == 60:
+            status = "[green]Valid (60 cards)[/green]"
+        else:
+            status = f"[yellow]{total}/60 cards[/yellow]"
+
+        console.print(f"Status: {status}")
+        console.print(f"Pokemon: {deck.pokemon_count} | Trainers: {deck.trainer_count} | Energy: {deck.energy_count}")
+
+        if deck.deck_abilities:
+            abilities_str = ", ".join([a.value for a in deck.deck_abilities[:5]])
+            console.print(f"Abilities: [cyan]{abilities_str}[/cyan]")
+
+        console.print()
+
+        # Show deck builder menu
+        menu_title = "Options" if CURRENT_LANGUAGE == Language.EN else "Opcoes"
+        console.print(f"[bold]{menu_title}:[/bold]")
+        console.print("  [cyan]1[/cyan] - Add Pokemon (with ability filters)")
+        console.print("  [cyan]2[/cyan] - Add Trainer card")
+        console.print("  [cyan]3[/cyan] - Add Energy")
+        console.print("  [cyan]4[/cyan] - Remove card")
+        console.print("  [cyan]5[/cyan] - View current deck")
+        console.print("  [cyan]6[/cyan] - [bold green]Analyze Matchups[/bold green]")
+        console.print("  [cyan]7[/cyan] - [bold green]Generate Gameplay Guides[/bold green]")
+        console.print("  [cyan]8[/cyan] - Get card suggestions")
+        console.print("  [cyan]9[/cyan] - Import from meta deck")
+        console.print("  [cyan]q[/cyan] - Finish and exit")
+        console.print()
+
+        choice = Prompt.ask("Select", choices=["1", "2", "3", "4", "5", "6", "7", "8", "9", "q"], default="1")
+
+        if choice == "q":
+            break
+
+        elif choice == "1":
+            # Add Pokemon with filters
+            run_add_pokemon(deck)
+
+        elif choice == "2":
+            # Add Trainer
+            run_add_trainer(deck)
+
+        elif choice == "3":
+            # Add Energy
+            run_add_energy(deck)
+
+        elif choice == "4":
+            # Remove card
+            run_remove_card(deck)
+
+        elif choice == "5":
+            # View current deck
+            run_view_deck(deck)
+
+        elif choice == "6":
+            # Analyze matchups
+            run_analyze_matchups(deck)
+
+        elif choice == "7":
+            # Generate guides
+            run_generate_guides(deck)
+
+        elif choice == "8":
+            # Get suggestions
+            run_get_suggestions(deck)
+
+        elif choice == "9":
+            # Import from meta
+            run_import_from_meta(deck)
+
+    # Final summary
+    if deck.total_cards > 0:
+        console.print()
+        console.print(Panel.fit("[bold green]Final Deck Summary[/bold green]", border_style="green"))
+        run_view_deck(deck)
+        if deck.total_cards >= 40:
+            run_analyze_matchups(deck)
+
+
+def run_add_pokemon(deck: DeckBuilderState):
+    """Add Pokemon to deck with ability filters."""
+    global CURRENT_LANGUAGE
+
+    console.print()
+    console.print("[bold]Add Pokemon[/bold]")
+    console.print()
+
+    # Show filter options
+    console.print("[bold]Filter by:[/bold]")
+    console.print("  [cyan]1[/cyan] - Search by name")
+    console.print("  [cyan]2[/cyan] - Filter by ability category")
+    console.print("  [cyan]3[/cyan] - Filter by type")
+    console.print("  [cyan]4[/cyan] - Show all ex Pokemon")
+    console.print("  [cyan]5[/cyan] - Show all Mega Pokemon (ASC)")
+    console.print("  [cyan]6[/cyan] - Browse database")
+    console.print()
+
+    filter_choice = Prompt.ask("Select filter", choices=["1", "2", "3", "4", "5", "6"], default="1")
+
+    results = []
+
+    if filter_choice == "1":
+        # Search by name
+        name = Prompt.ask("Enter Pokemon name")
+        results = search_pokemon(name=name, legal_only=True)
+
+    elif filter_choice == "2":
+        # Filter by ability
+        console.print()
+        console.print("[bold]Ability Categories:[/bold]")
+        categories = get_all_ability_categories()
+        for i, (cat, desc_en, desc_pt) in enumerate(categories, 1):
+            desc = desc_en if CURRENT_LANGUAGE == Language.EN else desc_pt
+            console.print(f"  [cyan]{i:2}[/cyan] - {cat.value}: {desc}")
+
+        cat_choice = Prompt.ask("Select category number", default="1")
+        try:
+            idx = int(cat_choice) - 1
+            if 0 <= idx < len(categories):
+                selected_cat = categories[idx][0]
+                results = search_pokemon(ability_category=selected_cat, legal_only=True)
+        except ValueError:
+            pass
+
+    elif filter_choice == "3":
+        # Filter by type
+        types = ["Fire", "Water", "Grass", "Lightning", "Psychic", "Fighting", "Darkness", "Metal", "Dragon", "Colorless"]
+        console.print()
+        for i, t in enumerate(types, 1):
+            console.print(f"  [cyan]{i:2}[/cyan] - {t}")
+
+        type_choice = Prompt.ask("Select type number", default="1")
+        try:
+            idx = int(type_choice) - 1
+            if 0 <= idx < len(types):
+                results = search_pokemon(energy_type=types[idx], legal_only=True)
+        except ValueError:
+            pass
+
+    elif filter_choice == "4":
+        # Show ex Pokemon
+        results = search_pokemon(is_ex=True, legal_only=True)
+
+    elif filter_choice == "5":
+        # Show Mega Pokemon
+        results = search_pokemon(is_mega=True, legal_only=True)
+
+    elif filter_choice == "6":
+        # Browse all
+        results = list(POKEMON_DATABASE.values())[:20]
+
+    if not results:
+        console.print("[yellow]No Pokemon found with those filters.[/yellow]")
+        return
+
+    # Display results
+    console.print()
+    console.print(f"[bold]Found {len(results)} Pokemon:[/bold]")
+
+    table = Table(box=box.ROUNDED)
+    table.add_column("#", style="dim")
+    table.add_column("Name", style="cyan")
+    table.add_column("Type", style="yellow")
+    table.add_column("HP", justify="right")
+    table.add_column("Stage", style="white")
+    table.add_column("Abilities", style="green")
+
+    for i, pokemon in enumerate(results[:15], 1):
+        abilities = [a.category.value for a in pokemon.abilities]
+        abilities.extend([a.value for a in pokemon.attack_categories])
+        abilities_str = ", ".join(abilities[:3]) if abilities else "-"
+
+        stage_str = pokemon.stage
+        if pokemon.is_ex:
+            stage_str += " [magenta]ex[/magenta]"
+        if pokemon.is_mega:
+            stage_str += " [cyan]Mega[/cyan]"
+
+        table.add_row(
+            str(i),
+            pokemon.name_en,
+            pokemon.energy_type,
+            str(pokemon.hp),
+            stage_str,
+            abilities_str
+        )
+
+    console.print(table)
+
+    if len(results) > 15:
+        console.print(f"[dim]Showing 15 of {len(results)} results[/dim]")
+
+    # Select Pokemon to add
+    console.print()
+    select_prompt = "Enter number to add (or 'q' to cancel)" if CURRENT_LANGUAGE == Language.EN else "Digite o numero para adicionar (ou 'q' para cancelar)"
+    selection = Prompt.ask(select_prompt, default="q")
+
+    if selection.lower() == "q":
+        return
+
+    try:
+        idx = int(selection) - 1
+        if 0 <= idx < min(len(results), 15):
+            pokemon = results[idx]
+            qty = int(Prompt.ask("Quantity", default="1"))
+            qty = min(4, max(1, qty))
+
+            # Find the key in POKEMON_DATABASE
+            pokemon_key = None
+            for key, p in POKEMON_DATABASE.items():
+                if p.name_en == pokemon.name_en and p.set_code == pokemon.set_code:
+                    pokemon_key = key
+                    break
+
+            if pokemon_key and add_pokemon_to_deck(deck, pokemon_key, qty):
+                console.print(f"[green]Added {qty}x {pokemon.name_en}![/green]")
+            else:
+                console.print("[yellow]Could not add Pokemon (maybe exceeds 4-card limit).[/yellow]")
+    except ValueError:
+        console.print("[yellow]Invalid selection.[/yellow]")
+
+
+def run_add_trainer(deck: DeckBuilderState):
+    """Add trainer card to deck."""
+    global CURRENT_LANGUAGE
+
+    console.print()
+    console.print("[bold]Add Trainer Card[/bold]")
+    console.print()
+
+    # Common trainers quick-add
+    console.print("[bold]Quick Add (Common Trainers):[/bold]")
+    common_trainers = [
+        ("Iono", "Iono", "PAL", "185", "Supporter - Shuffle and draw"),
+        ("Professor's Research", "Pesquisa do Professor", "SVI", "189", "Supporter - Discard hand, draw 7"),
+        ("Boss's Orders", "Ordens do Chefe", "ASC", "189", "Supporter - Gust effect"),
+        ("Arven", "Arven", "OBF", "186", "Supporter - Search Item/Tool"),
+        ("Ultra Ball", "Ultra Ball", "SVI", "196", "Item - Search any Pokemon"),
+        ("Nest Ball", "Nest Ball", "SVI", "181", "Item - Search Basic"),
+        ("Rare Candy", "Doce Raro", "SVI", "191", "Item - Skip Stage 1"),
+        ("Night Stretcher", "Maca Noturna", "SFA", "61", "Item - Recover Pokemon/Energy"),
+        ("Counter Catcher", "Coletor Contador", "PAR", "160", "Item - Gust when behind"),
+        ("Switch", "Trocar", "SVI", "194", "Item - Switch active"),
+    ]
+
+    for i, (name_en, name_pt, set_code, num, desc) in enumerate(common_trainers, 1):
+        console.print(f"  [cyan]{i:2}[/cyan] - {name_en}: [dim]{desc}[/dim]")
+
+    console.print(f"  [cyan]{len(common_trainers) + 1:2}[/cyan] - Custom (enter manually)")
+    console.print()
+
+    choice = Prompt.ask("Select trainer", default="1")
+
+    try:
+        idx = int(choice) - 1
+        if 0 <= idx < len(common_trainers):
+            name_en, name_pt, set_code, set_num, _ = common_trainers[idx]
+            qty = int(Prompt.ask("Quantity", default="4"))
+            qty = min(4, max(1, qty))
+
+            if add_trainer_to_deck(deck, name_en, name_pt, set_code, set_num, qty):
+                console.print(f"[green]Added {qty}x {name_en}![/green]")
+            else:
+                console.print("[yellow]Could not add (maybe exceeds 4-card limit).[/yellow]")
+        elif idx == len(common_trainers):
+            # Custom entry
+            name_en = Prompt.ask("Card name (English)")
+            name_pt = Prompt.ask("Card name (Portuguese)", default=name_en)
+            set_code = Prompt.ask("Set code (e.g., SVI)")
+            set_num = Prompt.ask("Card number")
+            qty = int(Prompt.ask("Quantity", default="1"))
+            qty = min(4, max(1, qty))
+
+            if add_trainer_to_deck(deck, name_en, name_pt, set_code, set_num, qty):
+                console.print(f"[green]Added {qty}x {name_en}![/green]")
+    except ValueError:
+        console.print("[yellow]Invalid selection.[/yellow]")
+
+
+def run_add_energy(deck: DeckBuilderState):
+    """Add energy to deck."""
+    console.print()
+    console.print("[bold]Add Energy[/bold]")
+    console.print()
+
+    energy_types = ["Fire", "Water", "Grass", "Lightning", "Psychic", "Fighting", "Darkness", "Metal", "Dragon", "Fairy"]
+
+    for i, e in enumerate(energy_types, 1):
+        console.print(f"  [cyan]{i:2}[/cyan] - Basic {e} Energy")
+
+    console.print()
+    choice = Prompt.ask("Select energy type", default="1")
+
+    try:
+        idx = int(choice) - 1
+        if 0 <= idx < len(energy_types):
+            energy_type = energy_types[idx]
+            qty = int(Prompt.ask("Quantity", default="8"))
+            qty = max(1, qty)
+
+            if add_energy_to_deck(deck, energy_type, qty, is_basic=True):
+                console.print(f"[green]Added {qty}x Basic {energy_type} Energy![/green]")
+    except ValueError:
+        console.print("[yellow]Invalid selection.[/yellow]")
+
+
+def run_remove_card(deck: DeckBuilderState):
+    """Remove card from deck."""
+    if not deck.cards:
+        console.print("[yellow]Deck is empty.[/yellow]")
+        return
+
+    console.print()
+    console.print("[bold]Current Cards:[/bold]")
+
+    for i, card in enumerate(deck.cards, 1):
+        console.print(f"  [cyan]{i:2}[/cyan] - {card.quantity}x {card.name_en} ({card.set_code})")
+
+    console.print()
+    choice = Prompt.ask("Enter number to remove (or 'q' to cancel)", default="q")
+
+    if choice.lower() == "q":
+        return
+
+    try:
+        idx = int(choice) - 1
+        if 0 <= idx < len(deck.cards):
+            card = deck.cards[idx]
+            qty = int(Prompt.ask(f"Quantity to remove (max {card.quantity})", default="1"))
+            qty = min(card.quantity, max(1, qty))
+
+            if remove_card_from_deck(deck, card.name_en, qty):
+                console.print(f"[green]Removed {qty}x {card.name_en}![/green]")
+    except ValueError:
+        console.print("[yellow]Invalid selection.[/yellow]")
+
+
+def run_view_deck(deck: DeckBuilderState):
+    """View complete deck list."""
+    global CURRENT_LANGUAGE
+    lang = "en" if CURRENT_LANGUAGE == Language.EN else "pt"
+
+    console.print()
+    summary = get_deck_summary(deck, lang)
+    console.print(summary)
+
+    if deck.cards:
+        console.print()
+        console.print("[bold]Complete Card List:[/bold]")
+
+        # Pokemon
+        pokemon = [c for c in deck.cards if c.card_type == "pokemon"]
+        if pokemon:
+            console.print("\n[bold cyan]Pokemon:[/bold cyan]")
+            for card in pokemon:
+                abilities = ", ".join([a.value for a in card.abilities]) if card.abilities else ""
+                console.print(f"  {card.quantity}x {card.name_en} ({card.set_code} {card.set_number}) [dim]{abilities}[/dim]")
+
+        # Trainers
+        trainers = [c for c in deck.cards if c.card_type == "trainer"]
+        if trainers:
+            console.print("\n[bold cyan]Trainers:[/bold cyan]")
+            for card in trainers:
+                console.print(f"  {card.quantity}x {card.name_en} ({card.set_code} {card.set_number})")
+
+        # Energy
+        energy = [c for c in deck.cards if c.card_type == "energy"]
+        if energy:
+            console.print("\n[bold cyan]Energy:[/bold cyan]")
+            for card in energy:
+                console.print(f"  {card.quantity}x {card.name_en}")
+
+
+def run_analyze_matchups(deck: DeckBuilderState):
+    """Analyze matchups against meta decks."""
+    global CURRENT_LANGUAGE
+
+    if deck.total_cards < 20:
+        msg = "Add more cards to analyze matchups (minimum 20)." if CURRENT_LANGUAGE == Language.EN else "Adicione mais cartas para analisar matchups (minimo 20)."
+        console.print(f"[yellow]{msg}[/yellow]")
+        return
+
+    lang = "en" if CURRENT_LANGUAGE == Language.EN else "pt"
+
+    with console.status("[bold cyan]Analyzing matchups against meta decks...[/bold cyan]"):
+        matchups = analyze_all_matchups(deck, lang)
+
+    display = get_matchup_display(matchups, lang)
+    console.print(display)
+
+    # Show details for specific matchup
+    console.print()
+    prompt = "Enter opponent number for details (or 'q' to skip)" if CURRENT_LANGUAGE == Language.EN else "Digite numero do oponente para detalhes (ou 'q' para pular)"
+    choice = Prompt.ask(prompt, default="q")
+
+    if choice.lower() != "q":
+        try:
+            idx = int(choice) - 1
+            if 0 <= idx < len(matchups):
+                matchup = matchups[idx]
+                console.print()
+                console.print(Panel(
+                    f"[bold]vs {matchup.opponent_name}[/bold]\n"
+                    f"Win Rate: {matchup.win_rate:.0f}%\n\n"
+                    f"[bold]Key Factors:[/bold]\n" +
+                    "\n".join([f"  - {f}" for f in matchup.key_factors]) +
+                    ("\n\n[bold]Tips:[/bold]\n" + "\n".join([f"  - {t}" for t in matchup.tips_en]) if matchup.tips_en else ""),
+                    border_style="cyan"
+                ))
+        except ValueError:
+            pass
+
+
+def run_generate_guides(deck: DeckBuilderState):
+    """Generate gameplay guides against meta decks."""
+    global CURRENT_LANGUAGE
+
+    if deck.total_cards < 20:
+        msg = "Add more cards to generate guides (minimum 20)." if CURRENT_LANGUAGE == Language.EN else "Adicione mais cartas para gerar guias (minimo 20)."
+        console.print(f"[yellow]{msg}[/yellow]")
+        return
+
+    lang = "en" if CURRENT_LANGUAGE == Language.EN else "pt"
+
+    with console.status("[bold cyan]Generating gameplay guides...[/bold cyan]"):
+        matchups = analyze_all_matchups(deck, lang)
+        guides = generate_all_guides(deck, matchups, lang)
+
+    console.print()
+    title = "Gameplay Guides" if CURRENT_LANGUAGE == Language.EN else "Guias de Jogo"
+    console.print(Panel.fit(f"[bold green]{title}[/bold green]", border_style="green"))
+
+    # List available guides
+    console.print()
+    for i, guide in enumerate(guides, 1):
+        difficulty_color = "green" if guide.difficulty in ["Easy", "Facil"] else "yellow" if guide.difficulty in ["Medium", "Medio"] else "red"
+        console.print(f"  [cyan]{i:2}[/cyan] - vs {guide.opponent_name} ({guide.win_rate:.0f}%) [{difficulty_color}]{guide.difficulty}[/{difficulty_color}]")
+
+    console.print()
+    prompt = "Enter number to view full guide (or 'a' for all, 'q' to skip)" if CURRENT_LANGUAGE == Language.EN else "Digite numero para ver guia completo (ou 'a' para todos, 'q' para pular)"
+    choice = Prompt.ask(prompt, default="q")
+
+    if choice.lower() == "q":
+        return
+
+    if choice.lower() == "a":
+        for guide in guides:
+            display = get_guide_display(guide, lang)
+            console.print(display)
+    else:
+        try:
+            idx = int(choice) - 1
+            if 0 <= idx < len(guides):
+                display = get_guide_display(guides[idx], lang)
+                console.print(display)
+        except ValueError:
+            pass
+
+
+def run_get_suggestions(deck: DeckBuilderState):
+    """Get card suggestions for the deck."""
+    global CURRENT_LANGUAGE
+    lang = "en" if CURRENT_LANGUAGE == Language.EN else "pt"
+
+    suggestions = suggest_cards_for_deck(deck, lang)
+
+    console.print()
+    title = "Card Suggestions" if CURRENT_LANGUAGE == Language.EN else "Sugestoes de Cartas"
+    console.print(Panel.fit(f"[bold green]{title}[/bold green]", border_style="green"))
+    console.print()
+
+    for category, cards in suggestions.items():
+        if cards:
+            cat_title = category.replace("_", " ").title()
+            console.print(f"[bold cyan]{cat_title}:[/bold cyan]")
+            for card_name, reason in cards:
+                console.print(f"  - {card_name}: [dim]{reason}[/dim]")
+            console.print()
+
+
+def run_import_from_meta(deck: DeckBuilderState):
+    """Import cards from a meta deck."""
+    global CURRENT_LANGUAGE
+
+    console.print()
+    console.print("[bold]Import from Meta Deck[/bold]")
+    console.print()
+
+    # List meta decks
+    for i, (deck_id, meta_deck) in enumerate(META_DECKS.items(), 1):
+        name = meta_deck.get_name(CURRENT_LANGUAGE)
+        console.print(f"  [cyan]{i:2}[/cyan] - {name} (Tier {meta_deck.tier})")
+
+    console.print()
+    choice = Prompt.ask("Select deck to import from", default="1")
+
+    try:
+        idx = int(choice) - 1
+        deck_ids = list(META_DECKS.keys())
+        if 0 <= idx < len(deck_ids):
+            meta_deck = META_DECKS[deck_ids[idx]]
+
+            # Import all cards
+            for card_entry in meta_deck.cards:
+                if card_entry.card_type == "pokemon":
+                    # Try to find in database
+                    pokemon_key = None
+                    for key, p in POKEMON_DATABASE.items():
+                        if card_entry.name_en.lower() in p.name_en.lower() and card_entry.set_code == p.set_code:
+                            pokemon_key = key
+                            break
+
+                    if pokemon_key:
+                        add_pokemon_to_deck(deck, pokemon_key, card_entry.quantity)
+                    else:
+                        # Add as generic card
+                        card = DeckBuilderCard(
+                            name_en=card_entry.name_en,
+                            name_pt=card_entry.name_pt,
+                            set_code=card_entry.set_code,
+                            set_number=card_entry.set_number,
+                            quantity=card_entry.quantity,
+                            card_type="pokemon"
+                        )
+                        deck.cards.append(card)
+
+                elif card_entry.card_type == "trainer":
+                    add_trainer_to_deck(deck, card_entry.name_en, card_entry.name_pt,
+                                       card_entry.set_code, card_entry.set_number, card_entry.quantity)
+
+                elif card_entry.card_type == "energy":
+                    # Parse energy type from name
+                    for energy_type in ["Fire", "Water", "Grass", "Lightning", "Psychic", "Fighting", "Darkness", "Metal", "Dragon", "Fairy"]:
+                        if energy_type.lower() in card_entry.name_en.lower():
+                            add_energy_to_deck(deck, energy_type, card_entry.quantity)
+                            break
+
+            console.print(f"[green]Imported {meta_deck.get_name(CURRENT_LANGUAGE)}![/green]")
+    except ValueError:
+        console.print("[yellow]Invalid selection.[/yellow]")
+
+
 def main():
     """Main entry point."""
+    global CURRENT_LANGUAGE
     print_header()
 
     # Check for command line arguments
@@ -1091,7 +1665,7 @@ def main():
     else:
         # Interactive menu
         print_menu()
-        choice = Prompt.ask("Select option", choices=["1", "2", "3", "4", "5", "6", "l", "L", "q"], default="1")
+        choice = Prompt.ask("Select option", choices=["1", "2", "3", "4", "5", "6", "7", "l", "L", "q"], default="1")
 
         if choice.lower() == "q":
             console.print("[dim]Goodbye![/dim]")
@@ -1104,7 +1678,7 @@ def main():
             console.print(f"[green]{lang_msg}[/green]")
             console.print()
             print_menu()
-            choice = Prompt.ask("Select option", choices=["1", "2", "3", "4", "5", "6", "l", "q"], default="1")
+            choice = Prompt.ask("Select option", choices=["1", "2", "3", "4", "5", "6", "7", "l", "q"], default="1")
 
         if choice == "1":
             mode = "rotation"
@@ -1122,6 +1696,11 @@ def main():
             return
         elif choice == "6":
             run_view_matchups()
+            console.print()
+            console.print("[dim]Thank you for using TCG Rotation Checker![/dim]")
+            return
+        elif choice == "7":
+            run_deck_builder()
             console.print()
             console.print("[dim]Thank you for using TCG Rotation Checker![/dim]")
             return
