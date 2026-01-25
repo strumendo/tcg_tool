@@ -2,7 +2,8 @@
 Meta Database for Pokemon TCG - Top Competitive Decks with Matchups
 
 This module contains:
-- Complete deck lists for top 8 meta decks (January 2026)
+- Complete deck lists for top 9 meta decks (January 2026)
+- Updated with Ascended Heroes (ASC) cards
 - Matchup win rate calculations
 - Bilingual support (English/Portuguese)
 - Card translations and deck descriptions
@@ -278,26 +279,26 @@ META_DECKS["dragapult"] = MetaDeck(
 # -----------------------------------------------------------------------------
 META_DECKS["gardevoir"] = MetaDeck(
     id="gardevoir",
-    name_en="Gardevoir ex",
-    name_pt="Gardevoir ex",
+    name_en="Gardevoir ex / Mega Gardevoir ex",
+    name_pt="Gardevoir ex / Mega Gardevoir ex",
     tier=1,
-    description_en="The longest-running top deck with infinite energy acceleration and flexible attackers",
-    description_pt="O deck de topo mais duradouro com aceleracao de energia infinita e atacantes flexiveis",
-    strategy_en="Use Gardevoir ex's Psychic Embrace to attach energy from discard pile. Multiple attackers like Mega Diancie ex, Clefairy ex, and Jellicent ex provide coverage. Earthen Vessel helps discard energy for later use.",
-    strategy_pt="Use Psychic Embrace do Gardevoir ex para anexar energia da pilha de descarte. Multiplos atacantes como Mega Diancie ex, Clefairy ex e Jellicent ex fornecem cobertura. Earthen Vessel ajuda a descartar energia para uso posterior.",
+    description_en="The longest-running top deck with infinite energy acceleration, now with Mega Gardevoir ex options from MEV and Ascended Heroes",
+    description_pt="O deck de topo mais duradouro com aceleracao de energia infinita, agora com opcoes de Mega Gardevoir ex de MEV e Ascended Heroes",
+    strategy_en="Use Gardevoir ex's Psychic Embrace to attach energy from discard pile. Mega Gardevoir ex provides a powerful finisher. Multiple attackers like Mega Diancie ex and Lillie's Clefairy ex provide coverage. Earthen Vessel helps discard energy for later use.",
+    strategy_pt="Use Psychic Embrace do Gardevoir ex para anexar energia da pilha de descarte. Mega Gardevoir ex fornece um finalizador poderoso. Multiplos atacantes como Mega Diancie ex e Clefairy da Lillie ex fornecem cobertura. Earthen Vessel ajuda a descartar energia para uso posterior.",
     difficulty="Advanced",
-    meta_share=16.61,
-    key_pokemon=["Gardevoir ex", "Ralts", "Kirlia", "Mega Diancie ex", "Lillie's Clefairy ex"],
+    meta_share=15.80,
+    key_pokemon=["Gardevoir ex", "Mega Gardevoir ex", "Ralts", "Kirlia", "Mega Diancie ex", "Lillie's Clefairy ex"],
     energy_types=["Psychic"],
     strengths_en=[
         "Infinite energy acceleration",
-        "Flexible attacker options",
+        "Flexible attacker options with Mega evolutions",
         "Strong against Dragon types",
         "Excellent recovery options"
     ],
     strengths_pt=[
         "Aceleracao de energia infinita",
-        "Opcoes flexiveis de atacante",
+        "Opcoes flexiveis de atacante com Mega evolucoes",
         "Forte contra tipos Dragao",
         "Excelentes opcoes de recuperacao"
     ],
@@ -316,7 +317,7 @@ META_DECKS["gardevoir"] = MetaDeck(
         CardEntry(4, "Ralts", "Ralts", "SVI", "67", "pokemon"),
         CardEntry(3, "Kirlia", "Kirlia", "SVI", "68", "pokemon"),
         CardEntry(2, "Gardevoir ex", "Gardevoir ex", "SVI", "86", "pokemon"),
-        CardEntry(1, "Mega Gardevoir ex", "Mega Gardevoir ex", "MEV", "38", "pokemon"),
+        CardEntry(1, "Mega Gardevoir ex", "Mega Gardevoir ex", "ASC", "79", "pokemon"),
         CardEntry(1, "Mega Diancie ex", "Mega Diancie ex", "MEV", "40", "pokemon"),
         CardEntry(1, "Lillie's Clefairy ex", "Clefairy da Lillie ex", "JTG", "56", "pokemon"),
         CardEntry(1, "Scream Tail", "Cauda Gritante", "PAR", "86", "pokemon"),
@@ -327,7 +328,8 @@ META_DECKS["gardevoir"] = MetaDeck(
         CardEntry(3, "Lillie's Determination", "Determinacao da Lillie", "JTG", "77", "trainer"),
         CardEntry(2, "Arven", "Arven", "OBF", "186", "trainer"),
         CardEntry(2, "Professor's Research", "Pesquisa do Professor", "SVI", "189", "trainer"),
-        CardEntry(1, "Boss's Orders", "Ordens do Chefe", "PAL", "172", "trainer"),
+        CardEntry(1, "Boss's Orders", "Ordens do Chefe", "ASC", "189", "trainer"),
+        CardEntry(1, "Anthea & Concordia", "Anthea & Concordia", "ASC", "187", "trainer"),
         CardEntry(4, "Ultra Ball", "Ultra Ball", "SVI", "196", "trainer"),
         CardEntry(3, "Earthen Vessel", "Vaso de Barro", "PAR", "163", "trainer"),
         CardEntry(3, "Night Stretcher", "Maca Noturna", "SFA", "61", "trainer"),
@@ -335,10 +337,8 @@ META_DECKS["gardevoir"] = MetaDeck(
         CardEntry(2, "Technical Machine: Evolution", "Maquina Tecnica: Evolucao", "PAR", "178", "trainer"),
         CardEntry(1, "Buddy-Buddy Poffin", "Poffin Amigo-Amigo", "TEF", "144", "trainer"),
         CardEntry(1, "Counter Catcher", "Coletor Contador", "PAR", "160", "trainer"),
-        CardEntry(1, "Bravery Charm", "Amuleto da Bravura", "PAL", "173", "trainer"),
         CardEntry(1, "Secret Box", "Caixa Secreta", "JTG", "71", "trainer"),
         CardEntry(2, "Mystery Garden", "Jardim Misterioso", "MEV", "71", "trainer"),
-        CardEntry(1, "Artazon", "Artazon", "PAL", "171", "trainer"),
         # Energy
         CardEntry(7, "Basic Psychic Energy", "Energia Psiquica Basica", "SVE", "5", "energy"),
         CardEntry(4, "Basic Darkness Energy", "Energia Escuridao Basica", "SVE", "7", "energy"),
@@ -350,28 +350,28 @@ META_DECKS["gardevoir"] = MetaDeck(
 # -----------------------------------------------------------------------------
 META_DECKS["charizard"] = MetaDeck(
     id="charizard",
-    name_en="Charizard ex / Pidgeot ex",
-    name_pt="Charizard ex / Pidgeot ex",
+    name_en="Charizard ex / Mega Charizard Y ex",
+    name_pt="Charizard ex / Mega Charizard Y ex",
     tier=1,
-    description_en="Classic powerhouse deck with excellent consistency and comeback potential",
-    description_pt="Deck classico poderoso com excelente consistencia e potencial de virada",
-    strategy_en="Set up Pidgeot ex for Quick Search consistency. Charizard ex's Infernal Reign accelerates energy on evolution, and Burning Darkness deals more damage as opponent takes prizes. Survive early, then sweep late game.",
-    strategy_pt="Monte Pidgeot ex para consistencia com Quick Search. Infernal Reign do Charizard ex acelera energia na evolucao, e Burning Darkness causa mais dano conforme o oponente pega premios. Sobreviva no inicio, depois varra no final do jogo.",
+    description_en="Classic powerhouse deck updated with Mega Charizard Y ex from Ascended Heroes for devastating bench snipes",
+    description_pt="Deck classico poderoso atualizado com Mega Charizard Y ex do Ascended Heroes para snipes devastadores no banco",
+    strategy_en="Set up Pidgeot ex for Quick Search consistency. Charizard ex's Infernal Reign accelerates energy on evolution, and Burning Darkness deals more damage as opponent takes prizes. Mega Charizard Y ex adds 280 damage with bench snipe for finishing games. Survive early, then sweep late game.",
+    strategy_pt="Monte Pidgeot ex para consistencia com Quick Search. Infernal Reign do Charizard ex acelera energia na evolucao, e Burning Darkness causa mais dano conforme o oponente pega premios. Mega Charizard Y ex adiciona 280 de dano com snipe no banco para finalizar jogos. Sobreviva no inicio, depois varra no final do jogo.",
     difficulty="Beginner",
-    meta_share=13.86,
-    key_pokemon=["Charizard ex", "Charmander", "Charmeleon", "Pidgeot ex", "Pidgey"],
+    meta_share=14.50,
+    key_pokemon=["Charizard ex", "Mega Charizard Y ex", "Charmander", "Pidgeot ex", "Pidgey"],
     energy_types=["Fire"],
     strengths_en=[
         "Very consistent with Pidgeot ex",
         "Strong comeback mechanic",
-        "High damage output",
-        "Beginner-friendly"
+        "High damage output with bench snipe",
+        "Mega Charizard Y ex threatens KOs on benched Pokemon"
     ],
     strengths_pt=[
         "Muito consistente com Pidgeot ex",
         "Forte mecanica de virada",
-        "Alto dano",
-        "Amigavel para iniciantes"
+        "Alto dano com snipe no banco",
+        "Mega Charizard Y ex ameaca KOs em Pokemon no banco"
     ],
     weaknesses_en=[
         "Weak to Water",
@@ -385,17 +385,18 @@ META_DECKS["charizard"] = MetaDeck(
     ],
     cards=[
         # Pokemon
-        CardEntry(4, "Charmander", "Charmander", "MEW", "4", "pokemon"),
+        CardEntry(4, "Charmander", "Charmander", "ASC", "20", "pokemon"),
         CardEntry(1, "Charmeleon", "Charmeleon", "OBF", "27", "pokemon"),
-        CardEntry(3, "Charizard ex", "Charizard ex", "OBF", "125", "pokemon"),
+        CardEntry(2, "Charizard ex", "Charizard ex", "OBF", "125", "pokemon"),
+        CardEntry(1, "Mega Charizard Y ex", "Mega Charizard Y ex", "ASC", "22", "pokemon"),
         CardEntry(2, "Pidgey", "Pidgey", "OBF", "162", "pokemon"),
         CardEntry(2, "Pidgeot ex", "Pidgeot ex", "OBF", "164", "pokemon"),
         CardEntry(1, "Mew ex", "Mew ex", "MEW", "151", "pokemon"),
-        CardEntry(1, "Rotom V", "Rotom V", "CRZ", "45", "pokemon"),
+        CardEntry(1, "Entei", "Entei", "ASC", "25", "pokemon"),
         # Trainers
         CardEntry(4, "Arven", "Arven", "OBF", "186", "trainer"),
         CardEntry(3, "Iono", "Iono", "PAL", "185", "trainer"),
-        CardEntry(2, "Boss's Orders", "Ordens do Chefe", "PAL", "172", "trainer"),
+        CardEntry(2, "Boss's Orders", "Ordens do Chefe", "ASC", "189", "trainer"),
         CardEntry(1, "Professor's Research", "Pesquisa do Professor", "SVI", "189", "trainer"),
         CardEntry(4, "Rare Candy", "Doce Raro", "SVI", "191", "trainer"),
         CardEntry(4, "Ultra Ball", "Ultra Ball", "SVI", "196", "trainer"),
@@ -404,7 +405,6 @@ META_DECKS["charizard"] = MetaDeck(
         CardEntry(2, "Escape Rope", "Corda de Fuga", "BST", "125", "trainer"),
         CardEntry(1, "Pal Pad", "Bloco de Amigo", "SVI", "182", "trainer"),
         CardEntry(1, "Counter Catcher", "Coletor Contador", "PAR", "160", "trainer"),
-        CardEntry(1, "Forest Seal Stone", "Pedra do Selo da Floresta", "SIT", "156", "trainer"),
         CardEntry(2, "Artazon", "Artazon", "PAL", "171", "trainer"),
         # Energy
         CardEntry(8, "Basic Fire Energy", "Energia Fogo Basica", "SVE", "2", "energy"),
@@ -486,28 +486,28 @@ META_DECKS["raging_bolt"] = MetaDeck(
 # -----------------------------------------------------------------------------
 META_DECKS["grimmsnarl"] = MetaDeck(
     id="grimmsnarl",
-    name_en="Marnie's Grimmsnarl ex / Froslass",
-    name_pt="Grimmsnarl da Marnie ex / Froslass",
+    name_en="Marnie's Grimmsnarl ex / Mega Froslass ex",
+    name_pt="Grimmsnarl da Marnie ex / Mega Froslass ex",
     tier=1,
-    description_en="Control deck with spread damage and ability disruption",
-    description_pt="Deck de controle com dano espalhado e disrupcao de habilidades",
-    strategy_en="Froslass places damage counters on Pokemon with abilities each turn. Munkidori moves damage to key targets. Marnie's Grimmsnarl ex deals 180 damage with Shadow Bullet while also hitting bench. Wear down opponent's board systematically.",
-    strategy_pt="Froslass coloca contadores de dano em Pokemon com habilidades a cada turno. Munkidori move dano para alvos importantes. Grimmsnarl da Marnie ex causa 180 de dano com Shadow Bullet enquanto tambem acerta o banco. Desgaste o campo do oponente sistematicamente.",
+    description_en="Control deck with spread damage and ability disruption, now enhanced with Mega Froslass ex from Ascended Heroes",
+    description_pt="Deck de controle com dano espalhado e disrupcao de habilidades, agora aprimorado com Mega Froslass ex do Ascended Heroes",
+    strategy_en="Froslass places damage counters on Pokemon with abilities each turn. Mega Froslass ex from Ascended Heroes provides a powerful finisher with spread synergy. Munkidori moves damage to key targets. Marnie's Grimmsnarl ex deals 180 damage with Shadow Bullet while also hitting bench.",
+    strategy_pt="Froslass coloca contadores de dano em Pokemon com habilidades a cada turno. Mega Froslass ex do Ascended Heroes fornece um finalizador poderoso com sinergia de spread. Munkidori move dano para alvos importantes. Grimmsnarl da Marnie ex causa 180 de dano com Shadow Bullet enquanto tambem acerta o banco.",
     difficulty="Advanced",
-    meta_share=6.50,
-    key_pokemon=["Marnie's Grimmsnarl ex", "Froslass", "Snorunt", "Munkidori"],
-    energy_types=["Darkness"],
+    meta_share=7.20,
+    key_pokemon=["Marnie's Grimmsnarl ex", "Mega Froslass ex", "Froslass", "Snorunt", "Munkidori"],
+    energy_types=["Darkness", "Water"],
     strengths_en=[
         "Punishes ability-heavy decks",
         "Excellent spread damage",
-        "Type advantage vs Gardevoir",
-        "Strong late game"
+        "Mega Froslass ex adds burst damage potential",
+        "Type advantage vs Gardevoir"
     ],
     strengths_pt=[
         "Pune decks com muitas habilidades",
         "Excelente dano espalhado",
-        "Vantagem de tipo contra Gardevoir",
-        "Final de jogo forte"
+        "Mega Froslass ex adiciona potencial de burst",
+        "Vantagem de tipo contra Gardevoir"
     ],
     weaknesses_en=[
         "Weak to Grass (Ogerpon)",
@@ -526,31 +526,32 @@ META_DECKS["grimmsnarl"] = MetaDeck(
         CardEntry(2, "Marnie's Grimmsnarl ex", "Grimmsnarl da Marnie ex", "DRI", "136", "pokemon"),
         CardEntry(3, "Munkidori", "Munkidori", "TWM", "95", "pokemon"),
         CardEntry(2, "Snorunt", "Snorunt", "TWM", "51", "pokemon"),
-        CardEntry(2, "Froslass", "Froslass", "TWM", "53", "pokemon"),
+        CardEntry(1, "Froslass", "Froslass", "TWM", "53", "pokemon"),
+        CardEntry(1, "Mega Froslass ex", "Mega Froslass ex", "ASC", "52", "pokemon"),
         CardEntry(1, "Budew", "Budew", "PRE", "4", "pokemon"),
         CardEntry(1, "Shaymin", "Shaymin", "DRI", "10", "pokemon"),
         # Trainers
         CardEntry(4, "Arven", "Arven", "OBF", "186", "trainer"),
         CardEntry(4, "Iono", "Iono", "PAL", "185", "trainer"),
         CardEntry(3, "Professor's Research", "Pesquisa do Professor", "SVI", "189", "trainer"),
-        CardEntry(2, "Boss's Orders", "Ordens do Chefe", "PAL", "172", "trainer"),
+        CardEntry(2, "Boss's Orders", "Ordens do Chefe", "ASC", "189", "trainer"),
         CardEntry(2, "Buddy-Buddy Poffin", "Poffin Amigo-Amigo", "TEF", "144", "trainer"),
         CardEntry(2, "Nest Ball", "Nest Ball", "SVI", "181", "trainer"),
         CardEntry(2, "Rare Candy", "Doce Raro", "SVI", "191", "trainer"),
         CardEntry(2, "Counter Catcher", "Coletor Contador", "PAR", "160", "trainer"),
         CardEntry(2, "Night Stretcher", "Maca Noturna", "SFA", "61", "trainer"),
         CardEntry(1, "Super Rod", "Super Vara", "PAL", "188", "trainer"),
-        CardEntry(1, "Energy Search", "Busca de Energia", "SVI", "172", "trainer"),
         CardEntry(1, "Ultra Ball", "Ultra Ball", "SVI", "196", "trainer"),
         CardEntry(1, "Pokegear 3.0", "Pokegear 3.0", "SVI", "186", "trainer"),
         CardEntry(1, "Secret Box", "Caixa Secreta", "JTG", "71", "trainer"),
         CardEntry(2, "Technical Machine: Evolution", "Maquina Tecnica: Evolucao", "PAR", "178", "trainer"),
         CardEntry(1, "Technical Machine: Devolution", "Maquina Tecnica: Devolucao", "PAR", "177", "trainer"),
         CardEntry(1, "Rescue Board", "Prancha de Resgate", "TEF", "159", "trainer"),
-        CardEntry(3, "Spikemuth Gym", "Ginasio Spikemuth", "DRI", "152", "trainer"),
-        CardEntry(1, "Artazon", "Artazon", "PAL", "171", "trainer"),
+        CardEntry(2, "Spikemuth Gym", "Ginasio Spikemuth", "DRI", "152", "trainer"),
+        CardEntry(1, "Nighttime Mine", "Mina Noturna", "ASC", "195", "trainer"),
         # Energy
-        CardEntry(8, "Basic Darkness Energy", "Energia Escuridao Basica", "SVE", "7", "energy"),
+        CardEntry(6, "Basic Darkness Energy", "Energia Escuridao Basica", "SVE", "7", "energy"),
+        CardEntry(2, "Basic Water Energy", "Energia Agua Basica", "SVE", "3", "energy"),
     ]
 )
 
@@ -693,6 +694,74 @@ META_DECKS["flareon"] = MetaDeck(
     ]
 )
 
+# -----------------------------------------------------------------------------
+# 9. MEGA DRAGONITE EX (NEW - ASCENDED HEROES)
+# -----------------------------------------------------------------------------
+META_DECKS["mega_dragonite"] = MetaDeck(
+    id="mega_dragonite",
+    name_en="Mega Dragonite ex",
+    name_pt="Mega Dragonite ex",
+    tier=1,
+    description_en="New powerhouse from Ascended Heroes with Sky Transport ability for pivoting and massive 330 damage attacks",
+    description_pt="Novo powerhouse do Ascended Heroes com habilidade Sky Transport para pivoteamento e ataques massivos de 330 de dano",
+    strategy_en="Use Mega Dragonite ex's Sky Transport ability to pivot between attackers while building up energy. Ryuno Glide deals a devastating 330 damage. Dragonite V provides early game pressure while you set up. Use Rare Candy to evolve quickly.",
+    strategy_pt="Use a habilidade Sky Transport do Mega Dragonite ex para pivotar entre atacantes enquanto acumula energia. Ryuno Glide causa devastadores 330 de dano. Dragonite V fornece pressao no inicio do jogo enquanto voce monta. Use Doce Raro para evoluir rapidamente.",
+    difficulty="Intermediate",
+    meta_share=5.50,
+    key_pokemon=["Mega Dragonite ex", "Dragonite V", "Dratini", "Dragonair"],
+    energy_types=["Lightning", "Water"],
+    strengths_en=[
+        "Massive 330 damage output",
+        "Sky Transport enables flexible switching",
+        "Strong against most meta decks",
+        "New archetype with surprise factor"
+    ],
+    strengths_pt=[
+        "Dano massivo de 330",
+        "Sky Transport permite troca flexivel",
+        "Forte contra maioria dos decks do meta",
+        "Arquetipo novo com fator surpresa"
+    ],
+    weaknesses_en=[
+        "Weak to Fairy/Dragon types",
+        "Requires setup time",
+        "Energy-intensive attacks"
+    ],
+    weaknesses_pt=[
+        "Fraco contra tipos Fada/Dragao",
+        "Requer tempo de setup",
+        "Ataques intensivos em energia"
+    ],
+    cards=[
+        # Pokemon
+        CardEntry(3, "Dratini", "Dratini", "ASC", "140", "pokemon"),
+        CardEntry(2, "Dragonair", "Dragonair", "ASC", "141", "pokemon"),
+        CardEntry(3, "Mega Dragonite ex", "Mega Dragonite ex", "ASC", "142", "pokemon"),
+        CardEntry(2, "Dragonite V", "Dragonite V", "SIT", "118", "pokemon"),
+        CardEntry(1, "Latias ex", "Latias ex", "SSP", "76", "pokemon"),
+        CardEntry(1, "Mew ex", "Mew ex", "MEW", "151", "pokemon"),
+        CardEntry(1, "Fezandipiti ex", "Fezandipiti ex", "SFA", "38", "pokemon"),
+        # Trainers
+        CardEntry(4, "Iono", "Iono", "PAL", "185", "trainer"),
+        CardEntry(4, "Arven", "Arven", "OBF", "186", "trainer"),
+        CardEntry(2, "Boss's Orders", "Ordens do Chefe", "ASC", "189", "trainer"),
+        CardEntry(1, "Professor's Research", "Pesquisa do Professor", "SVI", "189", "trainer"),
+        CardEntry(4, "Ultra Ball", "Ultra Ball", "SVI", "196", "trainer"),
+        CardEntry(4, "Rare Candy", "Doce Raro", "SVI", "191", "trainer"),
+        CardEntry(3, "Nest Ball", "Nest Ball", "SVI", "181", "trainer"),
+        CardEntry(2, "Night Stretcher", "Maca Noturna", "SFA", "61", "trainer"),
+        CardEntry(2, "Earthen Vessel", "Vaso de Barro", "PAR", "163", "trainer"),
+        CardEntry(1, "Counter Catcher", "Coletor Contador", "PAR", "160", "trainer"),
+        CardEntry(1, "Switch", "Trocar", "SVI", "194", "trainer"),
+        CardEntry(1, "Poke Pad", "Poke Pad", "ASC", "192", "trainer"),
+        CardEntry(2, "Artazon", "Artazon", "PAL", "171", "trainer"),
+        # Energy
+        CardEntry(5, "Basic Lightning Energy", "Energia Eletrica Basica", "SVE", "4", "energy"),
+        CardEntry(5, "Basic Water Energy", "Energia Agua Basica", "SVE", "3", "energy"),
+        CardEntry(2, "Double Turbo Energy", "Energia Dupla Turbo", "BRS", "151", "energy"),
+    ]
+)
+
 
 # =============================================================================
 # MATCHUP MATRIX
@@ -798,6 +867,32 @@ MATCHUPS: list[MatchupData] = [
     MatchupData("joltik_box", "flareon", 55,
                 "Slightly favored - more versatile attackers",
                 "Levemente favorecido - atacantes mais versateis"),
+    MatchupData("joltik_box", "mega_dragonite", 45,
+                "Slightly unfavored - Dragonite's raw power is hard to handle",
+                "Levemente desfavorecido - poder bruto do Dragonite e dificil de lidar"),
+
+    # Mega Dragonite ex matchups (NEW - Ascended Heroes)
+    MatchupData("mega_dragonite", "gholdengo", 48,
+                "Slightly unfavored - Gholdengo's OHKO potential is problematic",
+                "Levemente desfavorecido - potencial de OHKO do Gholdengo e problematico"),
+    MatchupData("mega_dragonite", "dragapult", 55,
+                "Favored - 330 damage OHKOs Dragapult easily",
+                "Favorecido - 330 de dano nocauteia Dragapult facilmente"),
+    MatchupData("mega_dragonite", "gardevoir", 35,
+                "Unfavored - Gardevoir's Clefairy hits Dragon weakness",
+                "Desfavorecido - Clefairy do Gardevoir acerta fraqueza de Dragao"),
+    MatchupData("mega_dragonite", "charizard", 50,
+                "Even matchup - both are slow setup decks",
+                "Matchup equilibrado - ambos sao decks de setup lento"),
+    MatchupData("mega_dragonite", "raging_bolt", 55,
+                "Slightly favored - can trade efficiently with high HP",
+                "Levemente favorecido - pode trocar eficientemente com HP alto"),
+    MatchupData("mega_dragonite", "grimmsnarl", 52,
+                "Slightly favored - Sky Transport dodges spread damage",
+                "Levemente favorecido - Sky Transport evita dano espalhado"),
+    MatchupData("mega_dragonite", "flareon", 60,
+                "Favored - Flareon can't OHKO Mega Dragonite",
+                "Favorecido - Flareon nao pode nocautear Mega Dragonite em um golpe"),
 ]
 
 
