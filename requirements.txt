@@ -3,3 +3,6 @@ httpx>=0.28.0
 
 # Terminal UI formatting
 rich>=14.0.0
+
+# Development dependencies
+# pip install -r requirements.txt -r requirements-dev.txt

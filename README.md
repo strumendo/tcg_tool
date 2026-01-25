@@ -80,9 +80,27 @@ pip install -r requirements.txt
 pip install -r requirements.txt
 ```
 
+### Dependências de Desenvolvimento (opcional)
+
+```bash
+# Inclui pylint, pytest, mypy, black
+pip install -r requirements-dev.txt
+
+# Executar linting
+pylint *.py
+
+# Executar testes
+pytest
+
+# Verificar tipos
+mypy *.py
+```
+
 ### Dependências
 - `httpx` - Cliente HTTP para APIs
 - `rich` - Interface CLI com formatação
+- `pylint` - Análise estática de código (dev)
+- `pytest` - Framework de testes (dev)
 
 ---
 
