@@ -39,7 +39,15 @@ Ferramenta CLI para analisar decks de Pokemon TCG, verificar o impacto da rotaç
 - Indicadores de favorecido/desfavorecido/equilibrado
 - Notas explicativas para cada matchup
 
-### 6. Aplicativo Android (NOVO)
+### 6. Deck Builder com Matchups em Tempo Real (NOVO)
+- **Construa seu deck** com filtros por habilidade
+- **Filtros de Pokemon**: Safeguard, Bench Barrier, Energy Accel, Draw Power, etc.
+- **Análise de matchups em tempo real** contra todos os decks do meta
+- **Guias de gameplay** detalhados para cada matchup
+- **Sugestões de cartas** baseadas nas necessidades do deck
+- **Importar de decks do meta** como ponto de partida
+
+### 7. Aplicativo Android
 - **Navegue decks do meta** diretamente no celular
 - **Interface touch-friendly** com cards e botões grandes
 - **Funciona 100% offline** - dados embutidos no app
@@ -90,9 +98,10 @@ Exibe um menu com opções:
 2. Comparação de decks
 3. Ambos
 4. Sugestão de deck por Pokemon
-5. **Navegar Decks do Meta (Top 8)** *(NOVO)*
-6. **Ver Tabela de Matchups** *(NOVO)*
-L. **Alternar Idioma (EN/PT)** *(NOVO)*
+5. Navegar Decks do Meta (Top 9)
+6. Ver Tabela de Matchups
+7. **Deck Builder** *(NOVO)* - Construa decks com filtros e matchups
+L. Alternar Idioma (EN/PT)
 q. Sair
 
 ### Com Arquivo
@@ -157,18 +166,19 @@ python main.py -s Gardevoir --lang pt
 
 ## Base de Dados do Meta - Janeiro 2026
 
-### Top 8 Decks Competitivos
+### Top 9 Decks Competitivos (Atualizado com Ascended Heroes)
 
 | # | Deck | Meta Share | Tier | Dificuldade |
 |---|------|------------|------|-------------|
 | 1 | **Gholdengo ex** | 26.49% | 1 | Intermediário |
 | 2 | **Dragapult ex** | 19.95% | 1 | Intermediário |
-| 3 | **Gardevoir ex** | 16.61% | 1 | Avançado |
-| 4 | **Charizard ex / Pidgeot ex** | 13.86% | 1 | Iniciante |
+| 3 | **Gardevoir ex / Mega Gardevoir ex** | 15.80% | 1 | Avançado |
+| 4 | **Charizard ex / Mega Charizard Y ex** | 14.50% | 1 | Iniciante |
 | 5 | **Raging Bolt ex / Ogerpon ex** | 8.50% | 1 | Iniciante |
-| 6 | **Marnie's Grimmsnarl ex / Froslass** | 6.50% | 1 | Avançado |
-| 7 | **Joltik Box** | 4.80% | 2 | Intermediário |
-| 8 | **Flareon ex** | 3.20% | 2 | Iniciante |
+| 6 | **Marnie's Grimmsnarl ex / Mega Froslass ex** | 7.20% | 1 | Avançado |
+| 7 | **Mega Dragonite ex** *(NOVO - ASC)* | 5.50% | 1 | Intermediário |
+| 8 | **Joltik Box** | 4.80% | 2 | Intermediário |
+| 9 | **Flareon ex** | 3.20% | 2 | Iniciante |
 
 ### Matriz de Matchups (Win Rates)
 
@@ -354,7 +364,9 @@ Em **março de 2026**, todas as cartas com **Regulation Mark G** sairão do form
 ```
 tcg_tool/
 ├── main.py              # CLI principal com menu interativo
-├── meta_database.py     # Base de dados do meta (NOVO)
+├── meta_database.py     # Base de dados do meta (9 decks)
+├── abilities_database.py # Banco de habilidades de Pokemon (NOVO)
+├── deck_builder.py      # Construtor de deck com matchups (NOVO)
 ├── deck_suggest.py      # Sugestão de deck por Pokemon
 ├── deck_parser.py       # Parser formato PTCGO
 ├── rotation_checker.py  # Análise de rotação
@@ -364,9 +376,10 @@ tcg_tool/
 ├── models.py            # Dataclasses (Card, Deck, Substitution)
 ├── database.py          # SQLite para cache de cartas
 ├── requirements.txt     # Dependências Python
+├── claude.md            # Configurações para Claude Code (NOVO)
 ├── example_deck.txt     # Deck Charizard ex de exemplo
 ├── example_opponent.txt # Deck Lugia VSTAR de exemplo
-└── android_app/         # Aplicativo Android (NOVO)
+└── android_app/         # Aplicativo Android
     ├── main.py          # App Kivy principal
     ├── meta_data.py     # Dados offline do meta
     ├── buildozer.spec   # Configuração de build
@@ -458,9 +471,152 @@ class MatchupData:
 | `get_translation(key, lang)` | Retorna tradução de elemento UI |
 
 **Dados incluídos**:
-- 8 decks completos com 60 cartas cada
-- 28 matchups com win rates e notas
+- 9 decks completos com 60 cartas cada (atualizado com Ascended Heroes)
+- 36+ matchups com win rates e notas
 - Traduções para todas as strings de UI
+
+---
+
+### `abilities_database.py` - Banco de Habilidades (NOVO)
+
+**Descrição**: Base de dados de Pokemon organizados por categoria de habilidade, permitindo filtros avançados na construção de decks.
+
+**Classes principais**:
+
+```python
+class AbilityCategory(Enum):
+    SAFEGUARD = "safeguard"           # Previne dano de ex/V
+    BENCH_BARRIER = "bench_barrier"    # Protege banco
+    DAMAGE_REDUCTION = "damage_reduction"
+    ENERGY_ACCEL = "energy_accel"
+    DRAW_POWER = "draw_power"
+    SEARCH = "search"
+    SPREAD_DAMAGE = "spread_damage"
+    SNIPE = "snipe"
+    SWITCHING = "switching"
+    MEGA = "mega"
+    TERA = "tera"
+    # ... 20+ categorias
+
+@dataclass
+class PokemonAbility:
+    name: str              # Nome da habilidade
+    name_pt: str           # Nome em português
+    effect_en: str         # Efeito em inglês
+    effect_pt: str         # Efeito em português
+    category: AbilityCategory
+
+@dataclass
+class PokemonCard:
+    name_en: str           # Nome em inglês
+    name_pt: str           # Nome em português
+    set_code: str          # Código do set
+    set_number: str        # Número da carta
+    hp: int                # Pontos de vida
+    energy_type: str       # Tipo de energia
+    stage: str             # Basic, Stage 1, Stage 2, ex, Mega
+    abilities: list[PokemonAbility]
+    attack_categories: list[AbilityCategory]
+    is_ex: bool
+    is_mega: bool
+    is_tera: bool
+```
+
+**Funções principais**:
+| Função | Descrição |
+|--------|-----------|
+| `search_pokemon(name, type, ability, ...)` | Busca com múltiplos filtros |
+| `get_pokemon_by_ability(category)` | Pokemon por categoria de habilidade |
+| `get_pokemon_by_type(energy_type)` | Pokemon por tipo de energia |
+| `get_ex_pokemon()` | Todos os Pokemon ex |
+| `get_mega_pokemon()` | Todos os Mega Pokemon |
+| `get_counters_for_ability(ability)` | Counters para uma habilidade |
+
+**Pokemon cadastrados**:
+- Safeguard: Mimikyu, Miltank
+- Bench Barrier: Manaphy, Jirachi
+- Energy Accel: Gardevoir ex, Charizard ex, Ogerpon ex
+- Draw Power: Kirlia, Bibarel, Gholdengo ex
+- Spread: Froslass, Munkidori, Mega Froslass ex
+- Mega (ASC): Dragonite, Charizard Y, Gardevoir, Froslass, Lucario, Hawlucha
+
+---
+
+### `deck_builder.py` - Construtor de Deck (NOVO)
+
+**Descrição**: Módulo interativo para construção de decks com análise de matchups em tempo real e geração de guias de gameplay.
+
+**Classes principais**:
+
+```python
+@dataclass
+class DeckBuilderCard:
+    name_en: str
+    name_pt: str
+    set_code: str
+    set_number: str
+    quantity: int
+    card_type: str         # "pokemon", "trainer", "energy"
+    hp: int
+    energy_type: str
+    abilities: list[AbilityCategory]
+    is_ex: bool
+    is_mega: bool
+
+@dataclass
+class DeckBuilderState:
+    cards: list[DeckBuilderCard]
+    deck_name: str
+
+    # Properties
+    total_cards -> int
+    pokemon_count -> int
+    trainer_count -> int
+    energy_count -> int
+    is_valid -> bool       # 60 cards
+    main_attackers -> list
+    deck_abilities -> list[AbilityCategory]
+
+@dataclass
+class MatchupResult:
+    opponent_name: str
+    opponent_id: str
+    win_rate: float        # 0-100
+    confidence: str        # "High", "Medium", "Low"
+    key_factors: list[str]
+    tips_en: list[str]
+    tips_pt: list[str]
+
+@dataclass
+class GameplayGuide:
+    opponent_name: str
+    win_rate: float
+    difficulty: str        # "Easy", "Medium", "Hard"
+    early_game_priority_en: list[str]
+    mid_game_strategy_en: list[str]
+    late_game_focus_en: list[str]
+    key_threats_en: list[str]
+    priority_targets_en: list[str]
+```
+
+**Funções principais**:
+| Função | Descrição |
+|--------|-----------|
+| `analyze_all_matchups(deck)` | Análise contra todos os decks do meta |
+| `generate_all_guides(deck, matchups)` | Gera guias para todos os matchups |
+| `calculate_matchup_vs_meta_deck()` | Calcula matchup específico |
+| `calculate_overall_meta_score()` | Pontuação geral no meta |
+| `suggest_cards_for_deck(deck)` | Sugere cartas para melhorar |
+| `add_pokemon_to_deck(deck, key, qty)` | Adiciona Pokemon |
+| `add_trainer_to_deck(deck, ...)` | Adiciona Trainer |
+| `add_energy_to_deck(deck, type, qty)` | Adiciona Energy |
+
+**Fatores de matchup analisados**:
+- Vantagem de tipo (fraqueza/resistência)
+- Habilidades vs estratégia do oponente
+- Safeguard vs decks ex-heavy
+- Bench Barrier vs spread damage
+- Velocidade e consistência do deck
 
 ---
 
