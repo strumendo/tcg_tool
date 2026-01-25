@@ -21,6 +21,40 @@ git config user.email "strumendo@gmail.com"
 
 ---
 
+## Linting e Qualidade de Código
+
+### Pylint
+O projeto usa pylint para análise estática. Configuração em `.pylintrc`.
+
+```bash
+# Instalar dependências de desenvolvimento
+pip install -r requirements-dev.txt
+
+# Executar pylint
+pylint *.py
+
+# Verificar arquivo específico
+pylint main.py
+```
+
+### Regras Desabilitadas (ver .pylintrc)
+- `C0114`: missing-module-docstring (opcional para scripts)
+- `C0116`: missing-function-docstring (opcional para funções internas)
+- `R0903`: too-few-public-methods (dataclasses são ok)
+- `R0913`: too-many-arguments (algumas funções precisam)
+- `C0301`: line-too-long (120 chars permitido)
+
+### Antes de Commit
+```bash
+# Verificar sintaxe
+python -m py_compile *.py
+
+# Executar pylint (opcional mas recomendado)
+pylint *.py --exit-zero
+```
+
+---
+
 ## Estrutura do Projeto
 
 ```
