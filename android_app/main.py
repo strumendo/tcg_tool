@@ -1722,9 +1722,9 @@ class SettingsScreen(BaseScreen):
             divider = Widget(size_hint_y=None, height=dp(1))
             with divider.canvas:
                 Color(*get_color_from_hex(COLORS['divider']))
-                Rectangle(pos=divider.pos, size=divider.size)
-            divider.bind(pos=lambda w, p: setattr(w.canvas.children[1], 'pos', p))
-            divider.bind(size=lambda w, s: setattr(w.canvas.children[1], 'size', s))
+                divider.rect = Rectangle(pos=divider.pos, size=divider.size)
+            divider.bind(pos=lambda w, p: setattr(w.rect, 'pos', p))
+            divider.bind(size=lambda w, s: setattr(w.rect, 'size', s))
             settings_box.add_widget(divider)
 
         # Language dropdown
