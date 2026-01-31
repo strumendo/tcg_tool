@@ -237,11 +237,11 @@ class OutlineButton(Button):
 
         with self.canvas.after:
             Color(*get_color_from_hex(self.border_color))
-            self.border = Line(rounded_rectangle=(self.x, self.y, self.width, self.height, dp(4)), width=1.5)
+            self.border_line = Line(rounded_rectangle=(self.x, self.y, self.width, self.height, dp(4)), width=1.5)
         self.bind(pos=self._update, size=self._update)
 
     def _update(self, *args):
-        self.border.rounded_rectangle = (self.x, self.y, self.width, self.height, dp(4))
+        self.border_line.rounded_rectangle = (self.x, self.y, self.width, self.height, dp(4))
 
 
 class PlaceholderCard(BoxLayout):
