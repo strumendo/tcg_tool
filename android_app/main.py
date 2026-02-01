@@ -47,6 +47,8 @@ from meta_data import (
 # Import new screens
 from screens.import_screen import ImportScreen
 from screens.my_decks_screen import MyDecksScreen
+from screens.deck_editor_screen import DeckEditorScreen
+from screens.comparison_screen import ComparisonScreen
 
 # =============================================================================
 # COLOR SCHEME - Light theme based on wireframe
@@ -2085,6 +2087,8 @@ class TCGMetaApp(App):
         # New v2.0 screens
         sm.add_widget(ImportScreen(name='import'))
         sm.add_widget(MyDecksScreen(name='my_decks'))
+        sm.add_widget(DeckEditorScreen(name='deck_editor'))
+        sm.add_widget(ComparisonScreen(name='compare'))
 
         return sm
 

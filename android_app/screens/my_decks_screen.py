@@ -87,17 +87,30 @@ class MyDecksScreen(Screen):
         self.scroll.add_widget(self.decks_grid)
         main_layout.add_widget(self.scroll)
 
-        # Add deck button
-        add_btn = Button(
-            text='+ Import New Deck' if self.lang == 'en' else '+ Importar Novo Deck',
-            background_color=get_color_from_hex(COLORS['primary']),
-            font_size=sp(16),
-            bold=True,
-            size_hint_y=None,
-            height=dp(50)
+        # Bottom buttons
+        bottom_btns = BoxLayout(size_hint_y=None, height=dp(50), spacing=dp(10))
+
+        # Import deck button
+        import_btn = Button(
+            text='+ Import' if self.lang == 'en' else '+ Importar',
+            background_color=get_color_from_hex(COLORS['secondary']),
+            font_size=sp(14),
+            bold=True
         )
-        add_btn.bind(on_release=self._go_to_import)
-        main_layout.add_widget(add_btn)
+        import_btn.bind(on_release=self._go_to_import)
+        bottom_btns.add_widget(import_btn)
+
+        # Create new deck button
+        new_btn = Button(
+            text='+ New Deck' if self.lang == 'en' else '+ Novo Deck',
+            background_color=get_color_from_hex(COLORS['primary']),
+            font_size=sp(14),
+            bold=True
+        )
+        new_btn.bind(on_release=self._go_to_new_deck)
+        bottom_btns.add_widget(new_btn)
+
+        main_layout.add_widget(bottom_btns)
 
         self.add_widget(main_layout)
 
@@ -342,6 +355,14 @@ class MyDecksScreen(Screen):
             self.manager.transition.direction = 'left'
             self.manager.current = 'import'
 
+    def _go_to_new_deck(self, *args):
+        """Navigate to deck editor for new deck."""
+        if self.manager:
+            editor_screen = self.manager.get_screen('deck_editor')
+            editor_screen.deck_id = 0  # New deck
+            self.manager.transition.direction = 'left'
+            self.manager.current = 'deck_editor'
+
     def _set_active(self, deck: UserDeck):
         """Set a deck as active."""
         self.db.set_active_deck(deck.id)
@@ -349,21 +370,19 @@ class MyDecksScreen(Screen):
 
     def _go_to_compare(self, deck: UserDeck):
         """Navigate to comparison screen."""
-        # TODO: Implement comparison screen
-        self._show_message(
-            'Coming soon!' if self.lang == 'en' else 'Em breve!',
-            'Comparison feature is under development.' if self.lang == 'en' else
-            'A funcionalidade de comparação está em desenvolvimento.'
-        )
+        if self.manager:
+            compare_screen = self.manager.get_screen('compare')
+            compare_screen.deck_id = deck.id
+            self.manager.transition.direction = 'left'
+            self.manager.current = 'compare'
 
     def _go_to_edit(self, deck: UserDeck):
         """Navigate to edit screen."""
-        # TODO: Implement edit screen
-        self._show_message(
-            'Coming soon!' if self.lang == 'en' else 'Em breve!',
-            'Edit feature is under development.' if self.lang == 'en' else
-            'A funcionalidade de edição está em desenvolvimento.'
-        )
+        if self.manager:
+            editor_screen = self.manager.get_screen('deck_editor')
+            editor_screen.deck_id = deck.id
+            self.manager.transition.direction = 'left'
+            self.manager.current = 'deck_editor'
 
     def _confirm_delete(self, deck: UserDeck):
         """Show delete confirmation dialog."""
