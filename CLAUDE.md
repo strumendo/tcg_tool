@@ -1,5 +1,18 @@
 # CLAUDE.md - AI Assistant Guide for TCG Tool
 
+## Git Configuration (IMPORTANT)
+
+**All commits must use the following credentials:**
+
+```bash
+git config user.name "Bruno Strumendo"
+git config user.email "strumendo@gmail.com"
+```
+
+**Always configure before making commits.**
+
+---
+
 ## Project Overview
 
 This is a **Pokemon Trading Card Game (TCG) deck analyzer** with bilingual support (English/Portuguese). It provides:
@@ -9,6 +22,36 @@ This is a **Pokemon Trading Card Game (TCG) deck analyzer** with bilingual suppo
 - **Meta Database**: Top 8 competitive decks with complete card lists and matchup data
 
 The tool focuses on the **March 2026 rotation** (Regulation Mark G cards rotating out) and competitive meta analysis.
+
+### Target Device
+
+- **Samsung Galaxy Z Fold 6** - App must work in both folded (Cover Screen) and unfolded (Main Screen) modes
+- Responsive layouts required for both screen configurations
+
+### Project Expansion (v2.0)
+
+The project is being expanded to include:
+- **Deck Import**: Import decks from TCG Live or .txt files
+- **My Decks**: Personal deck collection management
+- **Deck Builder**: Create and edit decks with advanced search
+- **Comparison**: Compare decks against meta and variations
+- **AI/Video**: Process match videos for insights
+- **News**: PokeBeach integration
+- **Calendar**: Competition tracking with device calendar integration
+
+See `docs/` folder for complete documentation.
+
+## Project Documentation
+
+Complete project documentation is available in the `docs/` folder:
+
+| Document | Description |
+|----------|-------------|
+| `docs/REQUIREMENTS.md` | Functional and non-functional requirements |
+| `docs/BACKLOG.md` | Epics, User Stories, and Tasks with estimates |
+| `docs/FLOW.md` | Visual flow diagrams using Mermaid |
+
+---
 
 ## Technology Stack
 
@@ -20,6 +63,16 @@ The tool focuses on the **March 2026 rotation** (Regulation Mark G cards rotatin
 | Mobile | Kivy + Buildozer (Android) |
 | Database | SQLite (card cache) |
 | APIs | TCGdex (primary), Pokemon TCG API (fallback) |
+
+### External Data Sources
+
+| Source | URL | Usage |
+|--------|-----|-------|
+| TCGdex | https://tcgdex.dev | Card data (10+ languages) - Primary |
+| Pokemon TCG API | https://pokemontcg.io | Card data (English) - Fallback |
+| Limitless TCG | https://limitlesstcg.com | Tournament data, deck statistics |
+| PokeBeach | https://pokebeach.com | News feed |
+| RK9 | https://rk9.gg/events/pokemon | Official tournament calendar |
 
 ## Repository Structure
 
@@ -251,10 +304,33 @@ python main.py -m
 
 ## Git Workflow
 
+### Commit Configuration
+
+**IMPORTANT:** Always configure git credentials before committing:
+
+```bash
+git config user.name "Bruno Strumendo"
+git config user.email "strumendo@gmail.com"
+```
+
+### Branch Strategy
+
 - Main branch: `main`
 - Feature branches: `claude/feature-name-*` for AI-assisted development
 - Commits should be atomic and descriptive
 - Test locally before pushing
+- Always document changes
+
+### Reference Branches
+
+These branches contain useful code that can be reused:
+
+| Branch | Content |
+|--------|---------|
+| `claude/simplify-deck-validation-gZ06M` | Deck validation improvements |
+| `claude/fix-app-crash-build-6WTWz` | Kivy property conflict fixes |
+
+**Note:** After code is reused, these branches should be cleaned up.
 
 ## Quick Reference
 
