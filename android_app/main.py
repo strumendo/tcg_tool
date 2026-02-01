@@ -44,6 +44,10 @@ from meta_data import (
     get_translation, get_difficulty_translation
 )
 
+# Import new screens
+from screens.import_screen import ImportScreen
+from screens.my_decks_screen import MyDecksScreen
+
 # =============================================================================
 # COLOR SCHEME - Light theme based on wireframe
 # =============================================================================
@@ -314,9 +318,9 @@ class TopNavBar(ColoredBox):
         tab_items = [
             ('Home', 'home'),
             ('Meta Decks', 'meta'),
-            ('Deck Builder', 'deck_builder'),
-            ('Deck Details', 'details'),
-            ('Card Search', 'card_search'),
+            ('My Decks', 'my_decks'),
+            ('Import', 'import'),
+            ('Builder', 'deck_builder'),
         ]
 
         for text, screen_id in tab_items:
@@ -420,7 +424,7 @@ class HomeScreen(BaseScreen):
         # Main action buttons
         btn_box = BoxLayout(
             orientation='vertical',
-            spacing=dp(12),
+            spacing=dp(10),
             size_hint_y=0.45,
             padding=[dp(40), dp(8)]
         )
@@ -428,22 +432,71 @@ class HomeScreen(BaseScreen):
         meta_btn = PrimaryButton(
             text='Meta Decks',
             size_hint_y=None,
-            height=dp(48)
+            height=dp(44)
         )
         meta_btn.bind(on_press=lambda x: self.go_to('meta'))
 
-        builder_btn = OutlineButton(
-            text='Deck Builder',
+        my_decks_btn = SecondaryButton(
+            text='My Decks',
             size_hint_y=None,
-            height=dp(48)
+            height=dp(44)
         )
-        builder_btn.bind(on_press=lambda x: self.go_to('deck_builder'))
+        my_decks_btn.bind(on_press=lambda x: self.go_to('my_decks'))
 
         btn_box.add_widget(meta_btn)
-        btn_box.add_widget(builder_btn)
+        btn_box.add_widget(my_decks_btn)
         welcome_box.add_widget(btn_box)
 
         self.content.add_widget(welcome_box)
+
+        # Quick actions section
+        quick_section = ColoredBox(
+            orientation='vertical',
+            bg_color=COLORS['surface'],
+            size_hint_y=None,
+            height=dp(120),
+            padding=[dp(16), dp(12)],
+            spacing=dp(8)
+        )
+
+        quick_title = Label(
+            text='[b]Quick Actions[/b]',
+            markup=True,
+            font_size=sp(14),
+            color=get_color_from_hex(COLORS['text']),
+            halign='left',
+            size_hint_y=None,
+            height=dp(25)
+        )
+        quick_title.bind(size=quick_title.setter('text_size'))
+        quick_section.add_widget(quick_title)
+
+        quick_btns = BoxLayout(spacing=dp(10), size_hint_y=None, height=dp(70))
+
+        import_btn = OutlineButton(
+            text='Import\nDeck',
+            border_color=COLORS['primary']
+        )
+        import_btn.bind(on_press=lambda x: self.go_to('import'))
+
+        builder_btn = OutlineButton(
+            text='Deck\nBuilder',
+            border_color=COLORS['secondary']
+        )
+        builder_btn.bind(on_press=lambda x: self.go_to('deck_builder'))
+
+        compare_btn = OutlineButton(
+            text='Compare\nDecks',
+            border_color=COLORS['accent']
+        )
+        compare_btn.bind(on_press=lambda x: self.go_to('comparison'))
+
+        quick_btns.add_widget(import_btn)
+        quick_btns.add_widget(builder_btn)
+        quick_btns.add_widget(compare_btn)
+        quick_section.add_widget(quick_btns)
+
+        self.content.add_widget(quick_section)
 
         # Spacer
         self.content.add_widget(Widget())
@@ -1970,9 +2023,9 @@ class ExtendedNavBar(ColoredBox):
         self.padding = [dp(4), dp(4)]
 
         tab_items = [
-            ('Saved Decks', 'saved_decks'),
-            ('Comparison', 'comparison'),
-            ('Battle Seq', 'battle_sequence'),
+            ('My Decks', 'my_decks'),
+            ('Import', 'import'),
+            ('Compare', 'comparison'),
             ('Settings', 'settings'),
             ('Profile', 'profile'),
         ]
@@ -2029,6 +2082,9 @@ class TCGMetaApp(App):
         sm.add_widget(BattleSequenceScreen(name='battle_sequence'))
         sm.add_widget(SettingsScreen(name='settings'))
         sm.add_widget(ProfileScreen(name='profile'))
+        # New v2.0 screens
+        sm.add_widget(ImportScreen(name='import'))
+        sm.add_widget(MyDecksScreen(name='my_decks'))
 
         return sm
 
