@@ -52,6 +52,14 @@ from screens.comparison_screen import ComparisonScreen
 from screens.news_screen import NewsScreen
 from screens.calendar_screen import CalendarScreen
 
+# Import responsive utilities for Samsung Fold 6
+from utils.responsive import (
+    get_responsive_manager,
+    ScreenMode,
+    is_cover_mode,
+    is_main_mode,
+)
+
 # =============================================================================
 # COLOR SCHEME - Light theme based on wireframe
 # =============================================================================
@@ -363,10 +371,11 @@ class TopNavBar(ColoredBox):
 # =============================================================================
 
 class BaseScreen(Screen):
-    """Base screen with common navigation."""
+    """Base screen with common navigation and responsive support."""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        self.responsive = get_responsive_manager()
         self.main_layout = ColoredBox(orientation='vertical', bg_color=COLORS['background'])
 
         # Top navigation
@@ -379,8 +388,34 @@ class BaseScreen(Screen):
 
         self.add_widget(self.main_layout)
 
+        # Bind to screen mode changes for responsive layouts
+        self.responsive.bind(screen_mode=self._on_screen_mode_change)
+
     def on_enter(self):
         self.nav_bar.update_active_tab(self.name)
+
+    def _on_screen_mode_change(self, instance, mode):
+        """Handle screen mode change - override in subclasses for custom behavior."""
+        pass
+
+    @property
+    def is_cover_mode(self):
+        """Check if in cover screen mode (narrow)."""
+        return self.responsive.is_cover_mode
+
+    @property
+    def is_main_mode(self):
+        """Check if in main screen mode (expanded)."""
+        return self.responsive.is_main_mode
+
+    @property
+    def grid_columns(self):
+        """Get recommended grid columns for current mode."""
+        return self.responsive.grid_columns
+
+    def get_scaled_font(self, base_sp):
+        """Get scaled font size for current mode."""
+        return sp(base_sp * self.responsive.font_scale)
 
 
 # =============================================================================
@@ -388,20 +423,32 @@ class BaseScreen(Screen):
 # =============================================================================
 
 class HomeScreen(BaseScreen):
-    """Welcome home screen with main actions."""
+    """Welcome home screen with main actions - responsive for Samsung Fold 6."""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.build_ui()
 
+    def _on_screen_mode_change(self, instance, mode):
+        """Rebuild UI when screen mode changes."""
+        self.content.clear_widgets()
+        self.build_ui()
+
     def build_ui(self):
+        # Adapt layout based on screen mode
+        is_expanded = self.is_main_mode
+        padding_h = dp(32) if is_expanded else dp(24)
+        padding_v = dp(48) if is_expanded else dp(40)
+        welcome_height = dp(240) if is_expanded else dp(200)
+        font_scale = self.responsive.font_scale
+
         # Welcome section
         welcome_box = ColoredBox(
             orientation='vertical',
             bg_color=COLORS['surface'],
             size_hint_y=None,
-            height=dp(200),
-            padding=[dp(24), dp(40)]
+            height=welcome_height,
+            padding=[padding_h, padding_v]
         )
 
         welcome_title = Label(
@@ -453,12 +500,13 @@ class HomeScreen(BaseScreen):
 
         self.content.add_widget(welcome_box)
 
-        # Quick actions section
+        # Quick actions section - responsive for Fold 6
+        quick_height = dp(180) if is_expanded else dp(120)
         quick_section = ColoredBox(
             orientation='vertical',
             bg_color=COLORS['surface'],
             size_hint_y=None,
-            height=dp(120),
+            height=quick_height,
             padding=[dp(16), dp(12)],
             spacing=dp(8)
         )
@@ -466,7 +514,7 @@ class HomeScreen(BaseScreen):
         quick_title = Label(
             text='[b]Quick Actions[/b]',
             markup=True,
-            font_size=sp(14),
+            font_size=self.get_scaled_font(14),
             color=get_color_from_hex(COLORS['text']),
             halign='left',
             size_hint_y=None,
@@ -475,7 +523,19 @@ class HomeScreen(BaseScreen):
         quick_title.bind(size=quick_title.setter('text_size'))
         quick_section.add_widget(quick_title)
 
-        quick_btns = BoxLayout(spacing=dp(10), size_hint_y=None, height=dp(70))
+        # Use GridLayout for better responsiveness on main screen
+        btn_height = dp(80) if is_expanded else dp(70)
+        if is_expanded:
+            # Main screen: 2x3 grid layout
+            quick_btns = GridLayout(
+                cols=3,
+                spacing=dp(12),
+                size_hint_y=None,
+                height=btn_height * 2 + dp(12)
+            )
+        else:
+            # Cover/Phone: single row
+            quick_btns = BoxLayout(spacing=dp(10), size_hint_y=None, height=btn_height)
 
         import_btn = OutlineButton(
             text='Import\nDeck',
@@ -498,8 +558,32 @@ class HomeScreen(BaseScreen):
         quick_btns.add_widget(import_btn)
         quick_btns.add_widget(builder_btn)
         quick_btns.add_widget(compare_btn)
-        quick_section.add_widget(quick_btns)
 
+        # Add extra buttons on main screen
+        if is_expanded:
+            news_btn = OutlineButton(
+                text='News &\nEvents',
+                border_color=COLORS['primary_dark']
+            )
+            news_btn.bind(on_press=lambda x: self.go_to('news'))
+
+            calendar_btn = OutlineButton(
+                text='Calendar',
+                border_color=COLORS['secondary']
+            )
+            calendar_btn.bind(on_press=lambda x: self.go_to('calendar'))
+
+            my_decks_btn2 = OutlineButton(
+                text='My\nDecks',
+                border_color=COLORS['success']
+            )
+            my_decks_btn2.bind(on_press=lambda x: self.go_to('my_decks'))
+
+            quick_btns.add_widget(news_btn)
+            quick_btns.add_widget(calendar_btn)
+            quick_btns.add_widget(my_decks_btn2)
+
+        quick_section.add_widget(quick_btns)
         self.content.add_widget(quick_section)
 
         # Spacer
