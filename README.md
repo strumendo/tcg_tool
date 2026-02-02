@@ -381,28 +381,101 @@ Em **março de 2026**, todas as cartas com **Regulation Mark G** sairão do form
 
 ```
 tcg_tool/
-├── main.py              # CLI principal com menu interativo
-├── meta_database.py     # Base de dados do meta (9 decks)
-├── abilities_database.py # Banco de habilidades de Pokemon (NOVO)
-├── deck_builder.py      # Construtor de deck com matchups (NOVO)
-├── deck_suggest.py      # Sugestão de deck por Pokemon
-├── deck_parser.py       # Parser formato PTCGO
-├── rotation_checker.py  # Análise de rotação
-├── deck_compare.py      # Comparação de decks e matchups
-├── substitution.py      # Lógica de substituição
-├── card_api.py          # Integração TCGdex/Pokemon TCG API
-├── models.py            # Dataclasses (Card, Deck, Substitution)
-├── database.py          # SQLite para cache de cartas
-├── requirements.txt     # Dependências Python
-├── claude.md            # Configurações para Claude Code (NOVO)
-├── example_deck.txt     # Deck Charizard ex de exemplo
-├── example_opponent.txt # Deck Lugia VSTAR de exemplo
-└── android_app/         # Aplicativo Android
-    ├── main.py          # App Kivy principal
-    ├── meta_data.py     # Dados offline do meta
-    ├── buildozer.spec   # Configuração de build
-    └── README.md        # Instruções de build
+├── 📄 Arquivos Raiz (CLI Tool)
+│   ├── main.py              # Ponto de entrada CLI, menu interativo
+│   ├── meta_database.py     # 8 decks meta + matchups (bilíngue)
+│   ├── deck_parser.py       # Parser formato PTCGO
+│   ├── deck_compare.py      # Comparação entre decks
+│   ├── rotation_checker.py  # Análise de rotação (Mark G)
+│   ├── deck_suggest.py      # Sugestões de deck
+│   ├── substitution.py      # Substituição de cartas
+│   ├── card_api.py          # Integração TCGdex/Pokemon TCG API
+│   ├── models.py            # Dataclasses (Card, Deck)
+│   ├── requirements.txt     # Dependências Python
+│   ├── example_deck.txt     # Deck exemplo
+│   └── CLAUDE.md            # Instruções para desenvolvimento
+│
+├── 📁 android_app/          # Aplicativo Android (Kivy) v2.0
+│   ├── main.py              # App principal, navegação
+│   ├── meta_data.py         # Dados meta offline
+│   ├── buildozer.spec       # Configuração build Android
+│   │
+│   ├── 📁 screens/          # Telas do app
+│   │   ├── base_screen.py           # Classe base responsiva
+│   │   ├── import_screen.py         # Importar decks (texto/arquivo)
+│   │   ├── my_decks_screen.py       # Lista de decks do usuário
+│   │   ├── deck_editor_screen.py    # Criar/editar decks
+│   │   ├── comparison_screen.py     # Comparar decks vs meta
+│   │   ├── news_screen.py           # Feed PokeBeach
+│   │   ├── calendar_screen.py       # Calendário de torneios
+│   │   └── match_analysis_screen.py # Análise de vídeos/IA
+│   │
+│   ├── 📁 services/         # Lógica de negócio
+│   │   ├── deck_import.py      # Parsing e validação
+│   │   ├── user_database.py    # SQLite - persistência
+│   │   ├── news_service.py     # Busca notícias
+│   │   └── match_analysis.py   # Processamento vídeos/IA
+│   │
+│   ├── 📁 utils/            # Utilitários
+│   │   └── responsive.py       # Samsung Fold (Cover/Main)
+│   │
+│   └── 📁 tests/            # Testes unitários (59 testes)
+│       ├── test_deck_import.py
+│       ├── test_user_database.py
+│       ├── test_match_analysis.py
+│       └── run_tests.py
+│
+└── 📁 docs/                 # Documentação
+    ├── INSTALL.md           # Guia de instalação passo a passo
+    ├── REQUIREMENTS.md      # Requisitos funcionais/não-funcionais
+    ├── BACKLOG.md           # Épicos, User Stories, Tasks
+    └── FLOW.md              # Diagramas de fluxo (Mermaid)
 ```
+
+### Fluxo de Dados
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        USUÁRIO                               │
+└─────────────────────────────────────────────────────────────┘
+                              │
+         ┌────────────────────┼────────────────────┐
+         ▼                    ▼                    ▼
+   ┌──────────┐        ┌───────────┐        ┌──────────┐
+   │   CLI    │        │  Android  │        │  Testes  │
+   │ main.py  │        │  main.py  │        │  pytest  │
+   └────┬─────┘        └─────┬─────┘        └────┬─────┘
+        │                    │                   │
+        ▼                    ▼                   ▼
+   ┌──────────┐        ┌───────────┐        ┌──────────┐
+   │ Módulos  │        │  Screens  │        │  tests/  │
+   │ .py raiz │        │   + UI    │        │          │
+   └────┬─────┘        └─────┬─────┘        └────┬─────┘
+        │                    │                   │
+        └────────────┬───────┴───────────────────┘
+                     ▼
+              ┌────────────┐
+              │  Services  │
+              │ (lógica)   │
+              └─────┬──────┘
+                    │
+        ┌───────────┼───────────┐
+        ▼           ▼           ▼
+   ┌─────────┐ ┌─────────┐ ┌─────────┐
+   │ SQLite  │ │  APIs   │ │  Cache  │
+   │ local   │ │ externas│ │ imagens │
+   └─────────┘ └─────────┘ └─────────┘
+```
+
+### Separação de Responsabilidades
+
+| Camada | Pasta | Responsabilidade |
+|--------|-------|------------------|
+| **Apresentação** | `screens/` | Interface visual, interação do usuário |
+| **Lógica** | `services/` | Regras de negócio, validação, processamento |
+| **Dados** | `services/user_database.py` | Persistência SQLite |
+| **Utilitários** | `utils/` | Funções auxiliares (responsividade) |
+| **Documentação** | `docs/` | Guias, requisitos, backlog, fluxos |
 
 ---
 
