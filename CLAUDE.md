@@ -47,6 +47,7 @@ Complete project documentation is available in the `docs/` folder:
 
 | Document | Description |
 |----------|-------------|
+| `docs/INSTALL.md` | Step-by-step installation guide |
 | `docs/REQUIREMENTS.md` | Functional and non-functional requirements |
 | `docs/BACKLOG.md` | Epics, User Stories, and Tasks with estimates |
 | `docs/FLOW.md` | Visual flow diagrams using Mermaid |

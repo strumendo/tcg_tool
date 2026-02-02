@@ -1,5 +1,22 @@
 # Product Backlog - TCG Tool
 
+## Status da Release v2.0
+
+| Épico | Descrição | Status | Data |
+|-------|-----------|--------|------|
+| 1 | Importação de Decks | ✅ Concluído | 2026-02-01 |
+| 2 | Meus Decks | ✅ Concluído | 2026-02-01 |
+| 3 | Criação/Edição de Deck | ✅ Concluído | 2026-02-01 |
+| 4 | Comparação de Decks | ✅ Concluído | 2026-02-01 |
+| 5 | IA/Vídeos | ✅ Concluído | 2026-02-02 |
+| 6 | Notícias | ✅ Concluído | 2026-02-01 |
+| 7 | Calendário | ✅ Concluído | 2026-02-01 |
+| 8 | Samsung Fold 6 | ✅ Concluído | 2026-02-02 |
+
+**Testes:** 59 testes unitários implementados e passando.
+
+---
+
 ## Estrutura de Priorização
 
 **Prioridade:**
