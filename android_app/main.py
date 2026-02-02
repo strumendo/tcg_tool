@@ -51,6 +51,7 @@ from screens.deck_editor_screen import DeckEditorScreen
 from screens.comparison_screen import ComparisonScreen
 from screens.news_screen import NewsScreen
 from screens.calendar_screen import CalendarScreen
+from screens.match_analysis_screen import MatchAnalysisScreen
 
 # Import responsive utilities for Samsung Fold 6
 from utils.responsive import (
@@ -2177,6 +2178,7 @@ class TCGMetaApp(App):
         sm.add_widget(ComparisonScreen(name='compare'))
         sm.add_widget(NewsScreen(name='news'))
         sm.add_widget(CalendarScreen(name='calendar'))
+        sm.add_widget(MatchAnalysisScreen(name='match_analysis'))
 
         return sm
 
