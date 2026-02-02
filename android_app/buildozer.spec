@@ -1,7 +1,7 @@
 [app]
 
 # (str) Title of your application
-title = TCG Meta Analyzer
+title = TCG Tool
 
 # (str) Package name
 package.name = tcgmeta
@@ -22,14 +22,14 @@ source.include_exts = py,png,jpg,kv,atlas,json
 #source.exclude_exts = spec
 
 # (list) List of directory to exclude (let empty to not exclude anything)
-#source.exclude_dirs = tests, bin, venv
+source.exclude_dirs = tests, bin, venv, .buildozer, __pycache__
 
 # (list) List of exclusions using pattern matching
 # Do not prefix with './'
 #source.exclude_patterns = license,images/*/*.jpg
 
 # (str) Application versioning (method 1)
-version = 1.0.0
+version = 2.0.0
 
 # (str) Application versioning (method 2)
 # version.regex = __version__ = ['"](.*)['"]

@@ -1,16 +1,26 @@
-# TCG Meta Analyzer - Android App
+# TCG Tool - Android App v2.0
 
-Aplicativo Android para navegar pelos top decks competitivos de Pokemon TCG com análise de matchups e suporte bilíngue (Português/Inglês).
+Aplicativo Android completo para gerenciamento e análise de decks de Pokemon TCG com suporte bilíngue (Português/Inglês) e otimização para Samsung Galaxy Z Fold 6.
 
-## Funcionalidades
+## Funcionalidades v2.0
 
-- **Browse Meta Decks**: Visualize os top 8 decks do meta
-- **Deck Details**: Informações completas incluindo estratégia, pontos fortes/fracos
-- **Complete Deck Lists**: Todas as 60 cartas com nomes em PT/EN
+### Gerenciamento de Decks
+- **Import**: Importe decks do Pokemon TCG Live ou arquivos .txt (formato PTCGO)
+- **My Decks**: Coleção pessoal de decks com persistência local
+- **Deck Editor**: Crie e edite decks com busca avançada de cartas
+- **Comparison**: Compare seus decks contra o meta e variações
+
+### Análise e Informação
+- **AI/Video**: Processe URLs do YouTube e transcrições para insights de partidas
+- **News**: Feed de notícias do PokeBeach integrado
+- **Calendar**: Acompanhe torneios e competições
+- **Browse Meta Decks**: Visualize os top 8 decks do meta atual
 - **Matchup Analysis**: Win rates e notas para cada confronto
-- **Pokemon Search**: Busque decks que contêm um Pokemon específico
+
+### Experiência
 - **Bilingual**: Suporte completo para Português e Inglês
-- **Foldable Support**: Compatível com Samsung Z Fold e outros dispositivos dobráveis
+- **Samsung Z Fold 6**: Layouts responsivos para tela fechada e aberta
+- **Foldable Support**: Compatível com todos dispositivos dobráveis
 
 ## Requisitos para Build
 
@@ -68,7 +78,7 @@ cd android_app
 # Primeira build (demora ~30 min, baixa Android SDK/NDK)
 buildozer android debug
 
-# O APK será gerado em: bin/tcgmeta-1.0.0-arm64-v8a_armeabi-v7a-debug.apk
+# O APK será gerado em: bin/tcgtool-2.0.0-arm64-v8a_armeabi-v7a-debug.apk
 ```
 
 ### Modo Release (para distribuição)
@@ -85,7 +95,7 @@ buildozer android release
 # Habilite "Depuração USB" no Android
 # Conecte o dispositivo via USB
 
-adb install bin/tcgmeta-1.0.0-arm64-v8a_armeabi-v7a-debug.apk
+adb install bin/tcgtool-2.0.0-arm64-v8a_armeabi-v7a-debug.apk
 ```
 
 ### Via Transferência de Arquivo
@@ -114,10 +124,31 @@ python main.py
 
 ```
 android_app/
-├── main.py           # Aplicativo Kivy principal
-├── meta_data.py      # Dados dos decks (offline)
-├── buildozer.spec    # Configuração do build
-└── README.md         # Este arquivo
+├── main.py              # Aplicativo Kivy principal
+├── meta_data.py         # Dados dos decks (offline)
+├── buildozer.spec       # Configuração do build
+├── README.md            # Este arquivo
+├── screens/             # Telas do app
+│   ├── import_screen.py
+│   ├── my_decks_screen.py
+│   ├── deck_editor_screen.py
+│   ├── comparison_screen.py
+│   ├── news_screen.py
+│   ├── calendar_screen.py
+│   ├── match_analysis_screen.py
+│   └── base_screen.py   # Classe base responsiva
+├── services/            # Serviços de backend
+│   ├── deck_import.py
+│   ├── user_database.py
+│   ├── news_service.py
+│   └── match_analysis.py
+├── utils/               # Utilitários
+│   └── responsive.py    # Gerenciador responsivo Samsung Z Fold
+└── tests/               # Testes unitários
+    ├── test_deck_import.py
+    ├── test_user_database.py
+    ├── test_match_analysis.py
+    └── run_tests.py
 ```
 
 ## Troubleshooting
@@ -197,7 +228,7 @@ O app já inclui suporte para dispositivos dobráveis. Se ainda houver problemas
 rm -rf .buildozer
 buildozer android debug
 ```
-3. No dispositivo, vá em Configurações > Apps > TCG Meta > permitir "Redimensionável em multi-janela"
+3. No dispositivo, vá em Configurações > Apps > TCG Tool > permitir "Redimensionável em multi-janela"
 
 ## Build via GitHub Actions (CI/CD)
 
