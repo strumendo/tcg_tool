@@ -5,6 +5,7 @@ from .deck_editor_screen import DeckEditorScreen
 from .comparison_screen import ComparisonScreen
 from .news_screen import NewsScreen
 from .calendar_screen import CalendarScreen
+from .match_analysis_screen import MatchAnalysisScreen
 
 __all__ = [
     'ImportScreen',
@@ -12,5 +13,6 @@ __all__ = [
     'DeckEditorScreen',
     'ComparisonScreen',
     'NewsScreen',
-    'CalendarScreen'
+    'CalendarScreen',
+    'MatchAnalysisScreen'
 ]
