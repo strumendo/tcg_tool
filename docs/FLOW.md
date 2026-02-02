@@ -254,7 +254,7 @@ flowchart TD
     LoadActive --> CompareType{Tipo de comparação}
 
     CompareType -->|vs META| ShowMetaList[Listar decks META]
-    ShowMetaList --> SelectMeta[Selecionar deck(s) META]
+    ShowMetaList --> SelectMeta[Selecionar decks META]
     SelectMeta --> LoadMeta[Carregar decks selecionados]
     LoadMeta --> CompareView[Visualização de Comparação]
 
