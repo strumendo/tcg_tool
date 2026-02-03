@@ -6,6 +6,10 @@ Features:
 - Set active deck
 - Navigate to deck details/edit
 - Delete decks
+
+Responsive for Samsung Galaxy Z Fold 6:
+- Cover screen: Compact single-column layout
+- Main screen: Larger touch targets and fonts
 """
 
 import os
@@ -27,6 +31,7 @@ from kivy.clock import Clock
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from services.user_database import UserDatabase, UserDeck
+from utils.responsive import get_responsive_manager
 
 
 # Color scheme
@@ -49,18 +54,38 @@ COLORS = {
 
 
 class MyDecksScreen(Screen):
-    """Screen displaying user's saved decks."""
+    """Screen displaying user's saved decks - responsive for Samsung Fold 6."""
 
     lang = StringProperty("en")
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.db = UserDatabase()
+        self.responsive = get_responsive_manager()
         self._build_ui()
+        # Bind to screen mode changes
+        self.responsive.bind(screen_mode=self._on_mode_change)
+
+    def _on_mode_change(self, instance, mode):
+        """Rebuild UI when screen mode changes."""
+        self.clear_widgets()
+        self._build_ui()
+        if hasattr(self, '_entered') and self._entered:
+            self._refresh_decks()
+
+    def _get_font_scale(self):
+        """Get current font scale factor."""
+        return self.responsive.font_scale
 
     def _build_ui(self):
-        """Build the screen UI."""
-        main_layout = BoxLayout(orientation='vertical', padding=dp(16), spacing=dp(16))
+        """Build the screen UI with responsive sizing."""
+        font_scale = self._get_font_scale()
+        is_cover = self.responsive.is_cover_mode
+        is_main = self.responsive.is_main_mode
+
+        # Responsive padding
+        padding = dp(20) if is_main else (dp(14) if is_cover else dp(16))
+        main_layout = BoxLayout(orientation='vertical', padding=padding, spacing=dp(16))
 
         with main_layout.canvas.before:
             Color(*get_color_from_hex(COLORS['background']))
@@ -79,22 +104,23 @@ class MyDecksScreen(Screen):
         self.scroll = ScrollView()
         self.decks_grid = GridLayout(
             cols=1,
-            spacing=dp(12),
+            spacing=dp(14),
             size_hint_y=None,
-            padding=[0, dp(8)]
+            padding=[0, dp(10)]
         )
         self.decks_grid.bind(minimum_height=self.decks_grid.setter('height'))
         self.scroll.add_widget(self.decks_grid)
         main_layout.add_widget(self.scroll)
 
-        # Bottom buttons
-        bottom_btns = BoxLayout(size_hint_y=None, height=dp(50), spacing=dp(10))
+        # Bottom buttons - larger touch targets
+        btn_height = self.responsive.button_height
+        bottom_btns = BoxLayout(size_hint_y=None, height=btn_height, spacing=dp(12))
 
         # Import deck button
         import_btn = Button(
             text='+ Import' if self.lang == 'en' else '+ Importar',
             background_color=get_color_from_hex(COLORS['secondary']),
-            font_size=sp(14),
+            font_size=sp(16 * font_scale),
             bold=True
         )
         import_btn.bind(on_release=self._go_to_import)
@@ -104,7 +130,7 @@ class MyDecksScreen(Screen):
         new_btn = Button(
             text='+ New Deck' if self.lang == 'en' else '+ Novo Deck',
             background_color=get_color_from_hex(COLORS['primary']),
-            font_size=sp(14),
+            font_size=sp(16 * font_scale),
             bold=True
         )
         new_btn.bind(on_release=self._go_to_new_deck)
@@ -119,24 +145,30 @@ class MyDecksScreen(Screen):
         self._bg_rect.size = args[0].size
 
     def _create_header(self):
-        """Create header with title and back button."""
-        header = BoxLayout(size_hint_y=None, height=dp(50), spacing=dp(10))
+        """Create header with title and back button - responsive sizing."""
+        font_scale = self._get_font_scale()
+        is_cover = self.responsive.is_cover_mode
 
-        # Back button
+        # Responsive header height - minimum 56dp for touch
+        header_height = self.responsive.nav_height
+        header = BoxLayout(size_hint_y=None, height=header_height, spacing=dp(12))
+
+        # Back button - minimum 48dp touch target
+        btn_size = self.responsive.touch_target
         back_btn = Button(
             text='<',
             size_hint_x=None,
-            width=dp(40),
+            width=btn_size,
             background_color=get_color_from_hex(COLORS['text_muted']),
-            font_size=sp(20)
+            font_size=sp(22 * font_scale)
         )
         back_btn.bind(on_release=self._go_back)
         header.add_widget(back_btn)
 
-        # Title
+        # Title - responsive font
         title = Label(
             text='My Decks' if self.lang == 'en' else 'Meus Decks',
-            font_size=sp(20),
+            font_size=sp(22 * font_scale),
             bold=True,
             color=get_color_from_hex(COLORS['text']),
             halign='left',
@@ -148,12 +180,16 @@ class MyDecksScreen(Screen):
         return header
 
     def _create_active_deck_indicator(self):
-        """Create indicator showing the active deck."""
+        """Create indicator showing the active deck - responsive sizing."""
+        font_scale = self._get_font_scale()
+
+        # Larger touch target
+        indicator_height = dp(56) if self.responsive.is_main_mode else dp(48)
         container = BoxLayout(
             size_hint_y=None,
-            height=dp(50),
-            padding=dp(12),
-            spacing=dp(8)
+            height=indicator_height,
+            padding=dp(14),
+            spacing=dp(10)
         )
 
         with container.canvas.before:
@@ -161,7 +197,7 @@ class MyDecksScreen(Screen):
             self._active_bg = RoundedRectangle(
                 pos=container.pos,
                 size=container.size,
-                radius=[dp(8)]
+                radius=[dp(10)]
             )
         container.bind(
             pos=lambda *a: setattr(self._active_bg, 'pos', container.pos),
@@ -170,16 +206,16 @@ class MyDecksScreen(Screen):
 
         icon = Label(
             text='★',
-            font_size=sp(18),
+            font_size=sp(20 * font_scale),
             color=(1, 1, 1, 1),
             size_hint_x=None,
-            width=dp(30)
+            width=dp(36)
         )
         container.add_widget(icon)
 
         self.active_deck_label = Label(
             text='No active deck' if self.lang == 'en' else 'Nenhum deck ativo',
-            font_size=sp(14),
+            font_size=sp(16 * font_scale),
             color=(1, 1, 1, 1),
             halign='left',
             valign='middle'
@@ -191,11 +227,13 @@ class MyDecksScreen(Screen):
 
     def on_enter(self):
         """Called when screen is displayed."""
+        self._entered = True
         self._refresh_decks()
 
     def _refresh_decks(self):
         """Refresh the deck list."""
         self.decks_grid.clear_widgets()
+        font_scale = self._get_font_scale()
 
         decks = self.db.get_all_decks()
         active_deck = self.db.get_active_deck()
@@ -210,11 +248,11 @@ class MyDecksScreen(Screen):
             empty_label = Label(
                 text='No decks saved yet.\nImport your first deck!' if self.lang == 'en' else
                      'Nenhum deck salvo ainda.\nImporte seu primeiro deck!',
-                font_size=sp(16),
+                font_size=sp(18 * font_scale),
                 color=get_color_from_hex(COLORS['text_secondary']),
                 halign='center',
                 size_hint_y=None,
-                height=dp(100)
+                height=dp(120)
             )
             self.decks_grid.add_widget(empty_label)
             return
@@ -224,29 +262,37 @@ class MyDecksScreen(Screen):
             self.decks_grid.add_widget(card)
 
     def _create_deck_card(self, deck: UserDeck):
-        """Create a card widget for a deck."""
+        """Create a card widget for a deck - responsive sizing."""
+        font_scale = self._get_font_scale()
+        is_cover = self.responsive.is_cover_mode
+        is_main = self.responsive.is_main_mode
+
+        # Larger card for better touch targets
+        card_height = dp(140) if is_main else (dp(120) if is_cover else dp(130))
+        card_padding = dp(16) if is_main else dp(12)
+
         card = BoxLayout(
             orientation='vertical',
             size_hint_y=None,
-            height=dp(110),
-            padding=dp(12),
-            spacing=dp(8)
+            height=card_height,
+            padding=card_padding,
+            spacing=dp(10)
         )
 
         with card.canvas.before:
             Color(*get_color_from_hex(COLORS['surface']))
-            card._bg = RoundedRectangle(pos=card.pos, size=card.size, radius=[dp(8)])
+            card._bg = RoundedRectangle(pos=card.pos, size=card.size, radius=[dp(10)])
         card.bind(
             pos=lambda *a, c=card: setattr(c._bg, 'pos', c.pos),
             size=lambda *a, c=card: setattr(c._bg, 'size', c.size)
         )
 
         # Top row: Name + Active indicator
-        top_row = BoxLayout(size_hint_y=None, height=dp(25))
+        top_row = BoxLayout(size_hint_y=None, height=dp(30))
 
         name_label = Label(
             text=deck.name,
-            font_size=sp(16),
+            font_size=sp(18 * font_scale),
             bold=True,
             color=get_color_from_hex(COLORS['text']),
             halign='left',
@@ -258,33 +304,33 @@ class MyDecksScreen(Screen):
         if deck.is_active:
             active_badge = Label(
                 text='★ ACTIVE' if self.lang == 'en' else '★ ATIVO',
-                font_size=sp(11),
+                font_size=sp(12 * font_scale),
                 color=get_color_from_hex(COLORS['primary']),
                 bold=True,
                 size_hint_x=None,
-                width=dp(70)
+                width=dp(80)
             )
             top_row.add_widget(active_badge)
 
         if not deck.is_complete:
             incomplete_badge = Label(
                 text='INCOMPLETE' if self.lang == 'en' else 'INCOMPLETO',
-                font_size=sp(10),
+                font_size=sp(11 * font_scale),
                 color=get_color_from_hex(COLORS['warning']),
                 size_hint_x=None,
-                width=dp(80)
+                width=dp(90)
             )
             top_row.add_widget(incomplete_badge)
 
         card.add_widget(top_row)
 
         # Stats row
-        stats_row = BoxLayout(size_hint_y=None, height=dp(20))
+        stats_row = BoxLayout(size_hint_y=None, height=dp(24))
 
         stats_text = f'{deck.total_cards}/60 cards • {deck.pokemon_count} Pokemon • {deck.trainer_count} Trainers • {deck.energy_count} Energy'
         stats_label = Label(
             text=stats_text,
-            font_size=sp(11),
+            font_size=sp(13 * font_scale),
             color=get_color_from_hex(COLORS['text_secondary']),
             halign='left',
             valign='middle'
@@ -294,15 +340,16 @@ class MyDecksScreen(Screen):
 
         card.add_widget(stats_row)
 
-        # Buttons row
-        buttons_row = BoxLayout(size_hint_y=None, height=dp(35), spacing=dp(8))
+        # Buttons row - larger touch targets
+        btn_height = dp(44) if is_main else dp(40)
+        buttons_row = BoxLayout(size_hint_y=None, height=btn_height, spacing=dp(10))
 
         # Set Active button
         if not deck.is_active:
             active_btn = Button(
                 text='Set Active' if self.lang == 'en' else 'Ativar',
                 background_color=get_color_from_hex(COLORS['primary']),
-                font_size=sp(12)
+                font_size=sp(14 * font_scale)
             )
             active_btn.bind(on_release=lambda x, d=deck: self._set_active(d))
             buttons_row.add_widget(active_btn)
@@ -312,7 +359,7 @@ class MyDecksScreen(Screen):
             compare_btn = Button(
                 text='Compare' if self.lang == 'en' else 'Comparar',
                 background_color=get_color_from_hex(COLORS['secondary']),
-                font_size=sp(12)
+                font_size=sp(14 * font_scale)
             )
             compare_btn.bind(on_release=lambda x, d=deck: self._go_to_compare(d))
             buttons_row.add_widget(compare_btn)
@@ -321,7 +368,7 @@ class MyDecksScreen(Screen):
         edit_btn = Button(
             text='Edit' if self.lang == 'en' else 'Editar',
             background_color=get_color_from_hex(COLORS['accent']),
-            font_size=sp(12)
+            font_size=sp(14 * font_scale)
         )
         edit_btn.bind(on_release=lambda x, d=deck: self._go_to_edit(d))
         buttons_row.add_widget(edit_btn)
@@ -330,7 +377,7 @@ class MyDecksScreen(Screen):
         delete_btn = Button(
             text='Delete' if self.lang == 'en' else 'Excluir',
             background_color=get_color_from_hex(COLORS['danger']),
-            font_size=sp(12)
+            font_size=sp(14 * font_scale)
         )
         delete_btn.bind(on_release=lambda x, d=deck: self._confirm_delete(d))
         buttons_row.add_widget(delete_btn)
@@ -385,32 +432,37 @@ class MyDecksScreen(Screen):
             self.manager.current = 'deck_editor'
 
     def _confirm_delete(self, deck: UserDeck):
-        """Show delete confirmation dialog."""
-        content = BoxLayout(orientation='vertical', padding=dp(20), spacing=dp(15))
+        """Show delete confirmation dialog - responsive sizing."""
+        font_scale = self._get_font_scale()
+        btn_height = self.responsive.button_height
+
+        content = BoxLayout(orientation='vertical', padding=dp(24), spacing=dp(18))
 
         content.add_widget(Label(
             text=f'Delete "{deck.name}"?' if self.lang == 'en' else f'Excluir "{deck.name}"?',
-            font_size=sp(16),
+            font_size=sp(18 * font_scale),
             halign='center'
         ))
 
         content.add_widget(Label(
             text='This action cannot be undone.' if self.lang == 'en' else
                  'Esta ação não pode ser desfeita.',
-            font_size=sp(13),
+            font_size=sp(15 * font_scale),
             color=get_color_from_hex(COLORS['text_secondary']),
             halign='center'
         ))
 
-        buttons = BoxLayout(size_hint_y=None, height=dp(45), spacing=dp(10))
+        buttons = BoxLayout(size_hint_y=None, height=btn_height, spacing=dp(12))
 
         delete_btn = Button(
             text='Delete' if self.lang == 'en' else 'Excluir',
-            background_color=get_color_from_hex(COLORS['danger'])
+            background_color=get_color_from_hex(COLORS['danger']),
+            font_size=sp(16 * font_scale)
         )
         cancel_btn = Button(
             text='Cancel' if self.lang == 'en' else 'Cancelar',
-            background_color=get_color_from_hex(COLORS['text_muted'])
+            background_color=get_color_from_hex(COLORS['text_muted']),
+            font_size=sp(16 * font_scale)
         )
 
         buttons.add_widget(delete_btn)
@@ -420,7 +472,7 @@ class MyDecksScreen(Screen):
         popup = Popup(
             title='Confirm Delete' if self.lang == 'en' else 'Confirmar Exclusão',
             content=content,
-            size_hint=(0.8, 0.4),
+            size_hint=(0.85, 0.45),
             auto_dismiss=True
         )
 
@@ -434,26 +486,30 @@ class MyDecksScreen(Screen):
         popup.open()
 
     def _show_message(self, title, message):
-        """Show a simple message popup."""
-        content = BoxLayout(orientation='vertical', padding=dp(20), spacing=dp(15))
+        """Show a simple message popup - responsive sizing."""
+        font_scale = self._get_font_scale()
+        btn_height = self.responsive.button_height
+
+        content = BoxLayout(orientation='vertical', padding=dp(24), spacing=dp(18))
 
         content.add_widget(Label(
             text=message,
-            font_size=sp(14),
+            font_size=sp(16 * font_scale),
             halign='center'
         ))
 
         close_btn = Button(
             text='OK',
             size_hint_y=None,
-            height=dp(40),
-            background_color=get_color_from_hex(COLORS['primary'])
+            height=btn_height,
+            background_color=get_color_from_hex(COLORS['primary']),
+            font_size=sp(16 * font_scale)
         )
 
         popup = Popup(
             title=title,
             content=content,
-            size_hint=(0.8, 0.35),
+            size_hint=(0.85, 0.4),
             auto_dismiss=True
         )
         close_btn.bind(on_release=popup.dismiss)

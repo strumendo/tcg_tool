@@ -5,8 +5,10 @@ This module provides utilities for detecting screen mode and adapting
 layouts for foldable devices.
 
 Samsung Galaxy Z Fold 6 Specifications:
-- Cover Screen: ~6.2" diagonal, 904x2316 pixels (~25:9 aspect ratio)
-- Main Screen: ~7.6" diagonal, 1812x2176 pixels (~4:3 aspect ratio)
+- Cover Screen: ~6.2" diagonal, 904x2316 pixels (~25:9 aspect ratio, ~968dp width)
+- Main Screen: ~7.6" diagonal, 1812x2176 pixels (~4:3 aspect ratio, ~768dp width)
+
+Note: High DPI screens (3.4x density) require proper dp/sp scaling.
 """
 
 from kivy.core.window import Window
@@ -36,6 +38,10 @@ class ResponsiveManager(EventDispatcher):
     Detects screen mode and provides layout parameters based on
     current screen dimensions.
 
+    Samsung Galaxy Z Fold 6:
+    - Cover: 904x2316px at ~3.4x density = ~266x681dp (very tall/narrow)
+    - Main: 1812x2176px at ~2.4x density = ~755x907dp (almost square)
+
     Usage:
         responsive = ResponsiveManager()
 
@@ -53,7 +59,10 @@ class ResponsiveManager(EventDispatcher):
     screen_mode = StringProperty(ScreenMode.PHONE)
     screen_width = NumericProperty(0)
     screen_height = NumericProperty(0)
+    screen_width_dp = NumericProperty(0)
+    screen_height_dp = NumericProperty(0)
     aspect_ratio = NumericProperty(1.0)
+    density = NumericProperty(1.0)
 
     # Boolean helpers
     is_cover_mode = BooleanProperty(False)
@@ -68,14 +77,21 @@ class ResponsiveManager(EventDispatcher):
     padding = NumericProperty(12)
     spacing = NumericProperty(10)
 
-    # Breakpoints (in dp)
-    COVER_MAX_WIDTH = 400      # Cover screen max width
-    MAIN_MIN_WIDTH = 600       # Main screen min width
-    TABLET_MIN_WIDTH = 800     # Tablet min width
+    # Component sizing
+    nav_height = NumericProperty(56)
+    button_height = NumericProperty(48)
+    list_item_height = NumericProperty(72)
+    icon_size = NumericProperty(24)
+    touch_target = NumericProperty(48)  # Minimum touch target size
+
+    # Breakpoints (in dp) - adjusted for Fold 6
+    COVER_MAX_WIDTH = 320      # Cover screen is ~266dp wide
+    MAIN_MIN_WIDTH = 500       # Main screen is ~755dp wide
+    TABLET_MIN_WIDTH = 900     # Tablet min width
 
     # Aspect ratio thresholds
-    NARROW_RATIO = 2.5         # Cover screen is very narrow (~25:9 = 2.78)
-    WIDE_RATIO = 1.5           # Below this is considered tablet-like
+    NARROW_RATIO = 2.0         # Cover screen is very narrow (~2.56 in dp)
+    WIDE_RATIO = 1.3           # Below this is considered tablet-like
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -101,7 +117,10 @@ class ResponsiveManager(EventDispatcher):
         self.screen_mode = ScreenMode.PHONE
         self.screen_width = 800
         self.screen_height = 1200
+        self.screen_width_dp = 400
+        self.screen_height_dp = 600
         self.aspect_ratio = 1.5
+        self.density = 2.0
         self.is_landscape = False
         self.is_cover_mode = False
         self.is_main_mode = False
@@ -140,15 +159,7 @@ class ResponsiveManager(EventDispatcher):
         self.screen_width = width
         self.screen_height = height
 
-        # Calculate aspect ratio (height/width for portrait orientation)
-        if width > 0:
-            self.aspect_ratio = height / width if height > width else width / height
-
-        self.is_landscape = width > height
-
-        # Detect foldable and specific mode
         # Get density safely (may not be available immediately on Android)
-        # Try multiple sources: Window.density, Metrics.density, or fallback to 1.0
         density = 1.0
         try:
             density = getattr(Window, 'density', None)
@@ -159,17 +170,32 @@ class ResponsiveManager(EventDispatcher):
                 density = Metrics.density or 1.0
             except Exception:
                 density = 1.0
-        width_dp = width / density
 
-        # Determine screen mode
-        if self.aspect_ratio >= self.NARROW_RATIO:
-            # Very narrow screen - Cover mode
+        self.density = density
+
+        # Calculate dimensions in dp
+        width_dp = width / density
+        height_dp = height / density
+        self.screen_width_dp = width_dp
+        self.screen_height_dp = height_dp
+
+        # Calculate aspect ratio (height/width for portrait orientation)
+        if width_dp > 0:
+            self.aspect_ratio = height_dp / width_dp if height_dp > width_dp else width_dp / height_dp
+
+        self.is_landscape = width > height
+
+        # Determine screen mode based on dp dimensions
+        # Samsung Fold 6 Cover: ~266dp x 681dp (ratio ~2.56)
+        # Samsung Fold 6 Main: ~755dp x 907dp (ratio ~1.2)
+        if width_dp <= self.COVER_MAX_WIDTH or self.aspect_ratio >= self.NARROW_RATIO:
+            # Very narrow screen or small width - Cover mode
             self.screen_mode = ScreenMode.COVER
             self.is_cover_mode = True
             self.is_main_mode = False
             self.is_foldable = True
         elif width_dp >= self.MAIN_MIN_WIDTH and self.aspect_ratio < self.WIDE_RATIO:
-            # Wide screen with tablet-like ratio - Main mode
+            # Wide screen with tablet-like ratio - Main mode (unfolded)
             self.screen_mode = ScreenMode.MAIN
             self.is_cover_mode = False
             self.is_main_mode = True
@@ -193,36 +219,58 @@ class ResponsiveManager(EventDispatcher):
     def _update_layout_params(self):
         """Update layout parameters based on current mode."""
         if self.screen_mode == ScreenMode.COVER:
-            # Compact layout for cover screen
+            # Compact layout for cover screen (Fold 6 Cover: ~266dp wide)
+            # Use larger sizes for touch targets on narrow screen
             self.grid_columns = 1
-            self.card_height = dp(100)
-            self.font_scale = 0.9
-            self.padding = dp(8)
-            self.spacing = dp(6)
+            self.card_height = dp(88)
+            self.font_scale = 1.0  # Keep readable on narrow screen
+            self.padding = dp(12)
+            self.spacing = dp(8)
+            self.nav_height = dp(56)
+            self.button_height = dp(48)
+            self.list_item_height = dp(72)
+            self.icon_size = dp(24)
+            self.touch_target = dp(48)
 
         elif self.screen_mode == ScreenMode.MAIN:
-            # Expanded layout for main screen
+            # Expanded layout for main screen (Fold 6 Main: ~755dp wide)
+            # Use larger sizes for better visibility on bigger screen
             self.grid_columns = 2
-            self.card_height = dp(140)
-            self.font_scale = 1.1
-            self.padding = dp(16)
-            self.spacing = dp(12)
+            self.card_height = dp(120)
+            self.font_scale = 1.15  # Slightly larger fonts
+            self.padding = dp(20)
+            self.spacing = dp(16)
+            self.nav_height = dp(64)
+            self.button_height = dp(52)
+            self.list_item_height = dp(80)
+            self.icon_size = dp(28)
+            self.touch_target = dp(52)
 
         elif self.screen_mode == ScreenMode.TABLET:
             # Large layout for tablets
             self.grid_columns = 3
-            self.card_height = dp(160)
-            self.font_scale = 1.2
-            self.padding = dp(20)
-            self.spacing = dp(16)
+            self.card_height = dp(140)
+            self.font_scale = 1.25
+            self.padding = dp(24)
+            self.spacing = dp(20)
+            self.nav_height = dp(72)
+            self.button_height = dp(56)
+            self.list_item_height = dp(88)
+            self.icon_size = dp(32)
+            self.touch_target = dp(56)
 
         else:
             # Standard phone layout
             self.grid_columns = 1
-            self.card_height = dp(120)
+            self.card_height = dp(96)
             self.font_scale = 1.0
-            self.padding = dp(12)
-            self.spacing = dp(10)
+            self.padding = dp(16)
+            self.spacing = dp(12)
+            self.nav_height = dp(56)
+            self.button_height = dp(48)
+            self.list_item_height = dp(72)
+            self.icon_size = dp(24)
+            self.touch_target = dp(48)
 
     def get_scaled_font(self, base_sp: float) -> float:
         """Get scaled font size based on current mode."""
