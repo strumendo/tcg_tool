@@ -17,7 +17,7 @@ from kivy.properties import (
     BooleanProperty,
     ListProperty
 )
-from kivy.metrics import dp, sp
+from kivy.metrics import dp, sp, Metrics
 from kivy.clock import Clock
 
 
@@ -80,25 +80,62 @@ class ResponsiveManager(EventDispatcher):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._update_scheduled = None
+        self._initialized = False
 
-        # Initial detection
-        self._detect_mode()
+        # Try initial detection synchronously with safe defaults
+        try:
+            self._detect_mode()
+            self._initialized = True
+        except Exception:
+            # If detection fails, use safe defaults
+            self._set_safe_defaults()
 
-        # Bind to window size changes
-        Window.bind(size=self._on_window_resize)
+        # Bind to window size changes (will update when window is ready)
+        try:
+            Window.bind(size=self._on_window_resize)
+        except Exception:
+            pass
+
+    def _set_safe_defaults(self):
+        """Set safe default values when window is not ready."""
+        self.screen_mode = ScreenMode.PHONE
+        self.screen_width = 800
+        self.screen_height = 1200
+        self.aspect_ratio = 1.5
+        self.is_landscape = False
+        self.is_cover_mode = False
+        self.is_main_mode = False
+        self.is_foldable = False
+        self._update_layout_params()
 
     def _on_window_resize(self, instance, size):
         """Handle window resize - schedule mode detection."""
-        if self._update_scheduled:
-            self._update_scheduled.cancel()
-        self._update_scheduled = Clock.schedule_once(
-            lambda dt: self._detect_mode(), 0.1
-        )
+        try:
+            if self._update_scheduled:
+                self._update_scheduled.cancel()
+            self._update_scheduled = Clock.schedule_once(
+                lambda dt: self._safe_detect_mode(), 0.1
+            )
+        except Exception:
+            pass
 
-    def _detect_mode(self):
+    def _safe_detect_mode(self):
+        """Safely detect mode with error handling."""
+        try:
+            self._detect_mode()
+            self._initialized = True
+        except Exception:
+            if not self._initialized:
+                self._set_safe_defaults()
+
+    def _detect_mode(self, *args):
         """Detect current screen mode based on dimensions."""
-        width = Window.width
-        height = Window.height
+        # Safely get window dimensions (may not be available on Android startup)
+        try:
+            width = Window.width or 800
+            height = Window.height or 600
+        except Exception:
+            width, height = 800, 600
 
         self.screen_width = width
         self.screen_height = height
@@ -110,7 +147,19 @@ class ResponsiveManager(EventDispatcher):
         self.is_landscape = width > height
 
         # Detect foldable and specific mode
-        width_dp = width / Window.density if Window.density else width
+        # Get density safely (may not be available immediately on Android)
+        # Try multiple sources: Window.density, Metrics.density, or fallback to 1.0
+        density = 1.0
+        try:
+            density = getattr(Window, 'density', None)
+            if density is None or density <= 0:
+                density = getattr(Metrics, 'density', 1.0) or 1.0
+        except Exception:
+            try:
+                density = Metrics.density or 1.0
+            except Exception:
+                density = 1.0
+        width_dp = width / density
 
         # Determine screen mode
         if self.aspect_ratio >= self.NARROW_RATIO:

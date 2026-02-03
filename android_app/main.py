@@ -9,6 +9,31 @@ import os
 # Add the script's directory to path for imports to work from any location
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+# =============================================================================
+# CRITICAL: Ensure Kivy metrics are initialized before ANY widgets are created
+# This fixes ZeroDivisionError in sp() function on Android startup
+# The Switch widget uses sp(41) in its style.kv which fails when density=0
+# =============================================================================
+import os
+os.environ.setdefault('KIVY_METRICS_DENSITY', '1')
+os.environ.setdefault('KIVY_METRICS_FONTSCALE', '1')
+os.environ.setdefault('KIVY_DPI', '96')
+
+from kivy.metrics import Metrics
+
+def _ensure_metrics_density():
+    """Ensure Metrics.density has a valid value to prevent sp() division by zero."""
+    try:
+        current_density = Metrics.density
+        if current_density is None or current_density <= 0:
+            # Force reset metrics with safe defaults
+            Metrics.reset_metrics()
+    except Exception:
+        pass
+
+_ensure_metrics_density()
+# =============================================================================
+
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.floatlayout import FloatLayout
@@ -1864,9 +1889,9 @@ class SettingsScreen(BaseScreen):
             divider = Widget(size_hint_y=None, height=dp(1))
             with divider.canvas:
                 Color(*get_color_from_hex(COLORS['divider']))
-                Rectangle(pos=divider.pos, size=divider.size)
-            divider.bind(pos=lambda w, p: setattr(w.canvas.children[1], 'pos', p))
-            divider.bind(size=lambda w, s: setattr(w.canvas.children[1], 'size', s))
+                divider._rect = Rectangle(pos=divider.pos, size=divider.size)
+            divider.bind(pos=lambda w, p: setattr(w._rect, 'pos', p) if hasattr(w, '_rect') else None)
+            divider.bind(size=lambda w, s: setattr(w._rect, 'size', s) if hasattr(w, '_rect') else None)
             settings_box.add_widget(divider)
 
         # Language dropdown
@@ -1966,9 +1991,9 @@ class ProfileScreen(BaseScreen):
         avatar = BoxLayout(size_hint=(None, None), size=(dp(80), dp(80)))
         with avatar.canvas.before:
             Color(*get_color_from_hex(COLORS['border']))
-            Ellipse(pos=avatar.pos, size=avatar.size)
-        avatar.bind(pos=lambda w, p: w.canvas.before.children[1].__setattr__('pos', p) if len(w.canvas.before.children) > 1 else None)
-        avatar.bind(size=lambda w, s: w.canvas.before.children[1].__setattr__('size', s) if len(w.canvas.before.children) > 1 else None)
+            avatar._ellipse = Ellipse(pos=avatar.pos, size=avatar.size)
+        avatar.bind(pos=lambda w, p: setattr(w._ellipse, 'pos', p) if hasattr(w, '_ellipse') else None)
+        avatar.bind(size=lambda w, s: setattr(w._ellipse, 'size', s) if hasattr(w, '_ellipse') else None)
 
         avatar_label = Label(
             text='JD',
