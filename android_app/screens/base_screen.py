@@ -138,7 +138,9 @@ class ResponsiveScreen(Screen):
     def create_card(self, **kwargs) -> BoxLayout:
         """Create a card container with responsive styling."""
         height = kwargs.pop('height', None) or self.card_height
-        padding = kwargs.pop('padding', None) or dp(12)
+        # Larger padding for better touch and readability
+        base_padding = dp(16) if not self.is_cover else dp(12)
+        padding = kwargs.pop('padding', None) or base_padding
 
         card = BoxLayout(
             orientation='vertical',
@@ -153,7 +155,7 @@ class ResponsiveScreen(Screen):
             card._bg = RoundedRectangle(
                 pos=card.pos,
                 size=card.size,
-                radius=[dp(8)]
+                radius=[dp(10)]
             )
         card.bind(
             pos=lambda *a, c=card: setattr(c._bg, 'pos', c.pos),
@@ -163,27 +165,31 @@ class ResponsiveScreen(Screen):
         return card
 
     def create_header(self, title: str, show_back: bool = True) -> BoxLayout:
-        """Create a responsive header with optional back button."""
+        """Create a responsive header with optimal touch targets."""
+        # Ensure minimum 48dp height for touch targets
+        header_height = dp(56) if self.is_main else (dp(48) if self.is_cover else dp(52))
         header = BoxLayout(
             size_hint_y=None,
-            height=dp(45) if not self.is_cover else dp(40),
-            spacing=dp(10)
+            height=header_height,
+            spacing=dp(12)
         )
 
         if show_back:
+            # Minimum 48dp touch target
+            btn_size = dp(48) if self.is_main else dp(44)
             back_btn = Button(
                 text='<',
                 size_hint_x=None,
-                width=dp(40) if not self.is_cover else dp(35),
+                width=btn_size,
                 background_color=get_color_from_hex(COLORS['text_muted']),
-                font_size=self.get_scaled_font(20)
+                font_size=self.get_scaled_font(22)
             )
             back_btn.bind(on_release=self._go_back)
             header.add_widget(back_btn)
 
         title_label = Label(
             text=title,
-            font_size=self.get_scaled_font(18),
+            font_size=self.get_scaled_font(20),
             bold=True,
             color=get_color_from_hex(COLORS['text']),
             halign='left',
@@ -195,14 +201,14 @@ class ResponsiveScreen(Screen):
         return header
 
     def create_section_label(self, text: str) -> Label:
-        """Create a section header label."""
+        """Create a section header label with good readability."""
         label = Label(
             text=text,
-            font_size=self.get_scaled_font(14),
+            font_size=self.get_scaled_font(16),
             bold=True,
             color=get_color_from_hex(COLORS['text']),
             size_hint_y=None,
-            height=dp(30),
+            height=dp(36),
             halign='left',
             valign='bottom'
         )
@@ -224,12 +230,28 @@ class ResponsiveScreen(Screen):
         return self.is_main and not self.is_cover
 
     def get_optimal_button_width(self) -> float:
-        """Get optimal button width for current mode."""
+        """Get optimal button width for current mode - minimum 72dp for touch."""
         if self.is_cover:
-            return dp(70)
+            return dp(72)  # Minimum touch-friendly width
         elif self.is_main:
-            return dp(100)
-        return dp(85)
+            return dp(110)  # Larger for main screen
+        return dp(88)  # Standard phone
+
+    def get_optimal_button_height(self) -> float:
+        """Get optimal button height - minimum 48dp for touch targets."""
+        if self.is_cover:
+            return dp(44)
+        elif self.is_main:
+            return dp(52)
+        return dp(48)
+
+    def get_list_item_height(self) -> float:
+        """Get optimal list item height."""
+        if self.is_cover:
+            return dp(72)
+        elif self.is_main:
+            return dp(88)
+        return dp(80)
 
     def get_optimal_card_columns(self) -> int:
         """Get optimal number of card columns."""
@@ -238,3 +260,11 @@ class ResponsiveScreen(Screen):
         elif self.is_main:
             return 2
         return 1
+
+    def get_input_height(self) -> float:
+        """Get optimal text input height."""
+        if self.is_cover:
+            return dp(40)
+        elif self.is_main:
+            return dp(48)
+        return dp(44)

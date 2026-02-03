@@ -59,8 +59,15 @@ from kivy.clock import Clock
 from kivy.properties import StringProperty, ListProperty, BooleanProperty
 
 # Only set window size on desktop (not Android)
+# Samsung Galaxy Z Fold 6 screen sizes (approximate dp):
+# - Cover screen: ~266dp x 681dp (very narrow)
+# - Main screen: ~755dp x 907dp (tablet-like)
+# Testing with main screen size by default (scaled for desktop)
 if platform not in ('android', 'ios'):
-    Window.size = (420, 900)
+    # Use main screen size for testing (better for development)
+    Window.size = (755, 907)  # Main screen dp size
+    # Uncomment below to test cover screen:
+    # Window.size = (320, 720)  # Cover screen simulation
 
 # Import meta database
 from meta_data import (
@@ -84,6 +91,9 @@ from utils.responsive import (
     ScreenMode,
     is_cover_mode,
     is_main_mode,
+    scaled_font,
+    get_padding,
+    get_spacing,
 )
 
 # =============================================================================
@@ -240,7 +250,7 @@ class CardBox(BoxLayout):
 
 
 class PrimaryButton(Button):
-    """Green primary button."""
+    """Green primary button - responsive sizing."""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -248,12 +258,16 @@ class PrimaryButton(Button):
         self.background_down = ''
         self.background_color = get_color_from_hex(COLORS['primary'])
         self.color = get_color_from_hex(COLORS['nav_text'])
-        self.font_size = sp(14)
+        responsive = get_responsive_manager()
+        self.font_size = sp(16 * responsive.font_scale)
         self.bold = True
+        # Ensure minimum touch target
+        if self.height < responsive.touch_target:
+            self.height = responsive.touch_target
 
 
 class SecondaryButton(Button):
-    """Blue secondary button."""
+    """Blue secondary button - responsive sizing."""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -261,12 +275,15 @@ class SecondaryButton(Button):
         self.background_down = ''
         self.background_color = get_color_from_hex(COLORS['button_blue'])
         self.color = get_color_from_hex(COLORS['nav_text'])
-        self.font_size = sp(14)
+        responsive = get_responsive_manager()
+        self.font_size = sp(16 * responsive.font_scale)
         self.bold = True
+        if self.height < responsive.touch_target:
+            self.height = responsive.touch_target
 
 
 class OutlineButton(Button):
-    """Outlined button with border."""
+    """Outlined button with border - responsive sizing."""
 
     def __init__(self, border_color=None, **kwargs):
         super().__init__(**kwargs)
@@ -274,16 +291,17 @@ class OutlineButton(Button):
         self.background_down = ''
         self.background_color = get_color_from_hex(COLORS['surface'])
         self.color = get_color_from_hex(border_color or COLORS['primary'])
-        self.font_size = sp(14)
+        responsive = get_responsive_manager()
+        self.font_size = sp(14 * responsive.font_scale)
         self.border_color = border_color or COLORS['primary']
 
         with self.canvas.after:
             Color(*get_color_from_hex(self.border_color))
-            self.border_line = Line(rounded_rectangle=(self.x, self.y, self.width, self.height, dp(4)), width=1.5)
+            self.border_line = Line(rounded_rectangle=(self.x, self.y, self.width, self.height, dp(6)), width=dp(2))
         self.bind(pos=self._update, size=self._update)
 
     def _update(self, *args):
-        self.border_line.rounded_rectangle = (self.x, self.y, self.width, self.height, dp(4))
+        self.border_line.rounded_rectangle = (self.x, self.y, self.width, self.height, dp(6))
 
 
 class PlaceholderCard(BoxLayout):
@@ -313,63 +331,111 @@ class PlaceholderCard(BoxLayout):
 # =============================================================================
 
 class TopNavBar(ColoredBox):
-    """Top navigation bar with app title and tabs."""
+    """Top navigation bar with app title and tabs - responsive for Samsung Fold 6."""
 
     def __init__(self, **kwargs):
         super().__init__(bg_color=COLORS['nav_bg'], **kwargs)
+        self.responsive = get_responsive_manager()
         self.orientation = 'vertical'
         self.size_hint_y = None
-        self.height = dp(100)
+        # Use responsive nav height
+        self._update_height()
+        self.responsive.bind(screen_mode=self._on_mode_change)
+
+        self._build_nav()
+
+    def _update_height(self):
+        """Update nav bar height based on screen mode."""
+        # Cover mode: more compact, Main mode: larger
+        if self.responsive.is_cover_mode:
+            self.height = dp(110)
+        elif self.responsive.is_main_mode:
+            self.height = dp(130)
+        else:
+            self.height = dp(120)
+
+    def _on_mode_change(self, instance, mode):
+        """Rebuild nav bar when screen mode changes."""
+        self._update_height()
+        self.clear_widgets()
+        self._build_nav()
+
+    def _build_nav(self):
+        """Build navigation bar content."""
+        font_scale = self.responsive.font_scale
+        is_cover = self.responsive.is_cover_mode
 
         # App title row
-        title_row = BoxLayout(size_hint_y=0.5, padding=[dp(16), dp(8)])
+        title_height = dp(48) if not is_cover else dp(44)
+        title_row = BoxLayout(size_hint_y=None, height=title_height, padding=[dp(16), dp(8)])
 
         title_label = Label(
             text='[b]Pokemon TCG App[/b]',
             markup=True,
-            font_size=sp(18),
+            font_size=sp(20 * font_scale),
             color=get_color_from_hex(COLORS['nav_text']),
-            halign='left'
+            halign='left',
+            valign='middle'
         )
         title_label.bind(size=title_label.setter('text_size'))
         title_row.add_widget(title_label)
 
-        # Quick actions indicator (from wireframe)
-        quick_box = BoxLayout(size_hint_x=None, width=dp(100))
-        quick_label = Label(
-            text='[size=10sp]Quick Actions\nView all your\nquick actions[/size]',
-            markup=True,
-            font_size=sp(10),
-            color=get_color_from_hex(COLORS['nav_text']),
-            halign='right'
-        )
-        quick_label.bind(size=quick_label.setter('text_size'))
-        quick_box.add_widget(quick_label)
-        title_row.add_widget(quick_box)
+        # Quick actions indicator - hide on cover screen to save space
+        if not is_cover:
+            quick_box = BoxLayout(size_hint_x=None, width=dp(120))
+            quick_label = Label(
+                text='[size={}sp]Quick Actions\nView all your\nquick actions[/size]'.format(int(11 * font_scale)),
+                markup=True,
+                font_size=sp(11 * font_scale),
+                color=get_color_from_hex(COLORS['nav_text']),
+                halign='right',
+                valign='middle'
+            )
+            quick_label.bind(size=quick_label.setter('text_size'))
+            quick_box.add_widget(quick_label)
+            title_row.add_widget(quick_box)
 
         self.add_widget(title_row)
 
-        # Tab row
-        self.tab_row = BoxLayout(size_hint_y=0.5, spacing=dp(2), padding=[dp(4), 0])
+        # Tab row - responsive font and spacing
+        tab_height = dp(52) if not is_cover else dp(48)
+        self.tab_row = BoxLayout(
+            size_hint_y=None,
+            height=tab_height,
+            spacing=dp(4),
+            padding=[dp(8), dp(4)]
+        )
         self.tabs = {}
 
-        tab_items = [
-            ('Home', 'home'),
-            ('Meta Decks', 'meta'),
-            ('My Decks', 'my_decks'),
-            ('Import', 'import'),
-            ('Builder', 'deck_builder'),
-        ]
+        # Show fewer tabs on cover screen
+        if is_cover:
+            tab_items = [
+                ('Home', 'home'),
+                ('Meta', 'meta'),
+                ('Decks', 'my_decks'),
+                ('More', 'settings'),
+            ]
+        else:
+            tab_items = [
+                ('Home', 'home'),
+                ('Meta Decks', 'meta'),
+                ('My Decks', 'my_decks'),
+                ('Import', 'import'),
+                ('Builder', 'deck_builder'),
+            ]
+
+        tab_font_size = sp(13 * font_scale) if not is_cover else sp(12)
 
         for text, screen_id in tab_items:
             btn = Button(
                 text=text,
-                font_size=sp(11),
+                font_size=tab_font_size,
                 background_normal='',
                 background_down='',
                 background_color=(1, 1, 1, 0.2) if screen_id != 'home' else (1, 1, 1, 0.4),
                 color=get_color_from_hex(COLORS['nav_text']),
-                size_hint_x=1
+                size_hint_x=1,
+                size_hint_y=1
             )
             btn.screen_id = screen_id
             btn.bind(on_press=self.on_tab_press)
@@ -463,10 +529,13 @@ class HomeScreen(BaseScreen):
     def build_ui(self):
         # Adapt layout based on screen mode
         is_expanded = self.is_main_mode
-        padding_h = dp(32) if is_expanded else dp(24)
-        padding_v = dp(48) if is_expanded else dp(40)
-        welcome_height = dp(240) if is_expanded else dp(200)
+        is_cover = self.is_cover_mode
         font_scale = self.responsive.font_scale
+
+        # Responsive padding and sizes
+        padding_h = dp(24) if is_expanded else (dp(16) if is_cover else dp(20))
+        padding_v = dp(32) if is_expanded else (dp(20) if is_cover else dp(28))
+        welcome_height = dp(280) if is_expanded else (dp(220) if is_cover else dp(240))
 
         # Welcome section
         welcome_box = ColoredBox(
@@ -480,43 +549,48 @@ class HomeScreen(BaseScreen):
         welcome_title = Label(
             text='[b]Welcome to Pokemon TCG App![/b]',
             markup=True,
-            font_size=sp(20),
+            font_size=sp(22 * font_scale),
             color=get_color_from_hex(COLORS['text']),
             halign='center',
-            size_hint_y=0.3
+            valign='middle',
+            size_hint_y=0.25
         )
         welcome_title.bind(size=welcome_title.setter('text_size'))
         welcome_box.add_widget(welcome_title)
 
         welcome_desc = Label(
             text='Explore meta decks, build your own, and stay ahead in\ncompetitive play.',
-            font_size=sp(13),
+            font_size=sp(15 * font_scale),
             color=get_color_from_hex(COLORS['text_secondary']),
             halign='center',
-            size_hint_y=0.25
+            valign='middle',
+            size_hint_y=0.20
         )
         welcome_desc.bind(size=welcome_desc.setter('text_size'))
         welcome_box.add_widget(welcome_desc)
 
-        # Main action buttons
+        # Main action buttons - larger touch targets
+        btn_padding = dp(24) if is_cover else dp(40)
         btn_box = BoxLayout(
             orientation='vertical',
-            spacing=dp(10),
-            size_hint_y=0.45,
-            padding=[dp(40), dp(8)]
+            spacing=dp(14),
+            size_hint_y=0.55,
+            padding=[btn_padding, dp(12)]
         )
+
+        btn_height = self.responsive.button_height
 
         meta_btn = PrimaryButton(
             text='Meta Decks',
             size_hint_y=None,
-            height=dp(44)
+            height=btn_height
         )
         meta_btn.bind(on_press=lambda x: self.go_to('meta'))
 
         my_decks_btn = SecondaryButton(
             text='My Decks',
             size_hint_y=None,
-            height=dp(44)
+            height=btn_height
         )
         my_decks_btn.bind(on_press=lambda x: self.go_to('my_decks'))
 
@@ -527,41 +601,50 @@ class HomeScreen(BaseScreen):
         self.content.add_widget(welcome_box)
 
         # Quick actions section - responsive for Fold 6
-        quick_height = dp(180) if is_expanded else dp(120)
+        quick_height = dp(220) if is_expanded else (dp(140) if is_cover else dp(160))
         quick_section = ColoredBox(
             orientation='vertical',
             bg_color=COLORS['surface'],
             size_hint_y=None,
             height=quick_height,
-            padding=[dp(16), dp(12)],
-            spacing=dp(8)
+            padding=[dp(16), dp(16)],
+            spacing=dp(12)
         )
 
         quick_title = Label(
             text='[b]Quick Actions[/b]',
             markup=True,
-            font_size=self.get_scaled_font(14),
+            font_size=sp(16 * font_scale),
             color=get_color_from_hex(COLORS['text']),
             halign='left',
             size_hint_y=None,
-            height=dp(25)
+            height=dp(28)
         )
         quick_title.bind(size=quick_title.setter('text_size'))
         quick_section.add_widget(quick_title)
 
-        # Use GridLayout for better responsiveness on main screen
-        btn_height = dp(80) if is_expanded else dp(70)
+        # Use GridLayout for better responsiveness
+        quick_btn_height = dp(88) if is_expanded else (dp(72) if is_cover else dp(80))
+
         if is_expanded:
             # Main screen: 2x3 grid layout
             quick_btns = GridLayout(
                 cols=3,
-                spacing=dp(12),
+                spacing=dp(16),
                 size_hint_y=None,
-                height=btn_height * 2 + dp(12)
+                height=quick_btn_height * 2 + dp(16)
+            )
+        elif is_cover:
+            # Cover screen: vertical stack for better touch targets
+            quick_btns = GridLayout(
+                cols=3,
+                spacing=dp(8),
+                size_hint_y=None,
+                height=quick_btn_height
             )
         else:
-            # Cover/Phone: single row
-            quick_btns = BoxLayout(spacing=dp(10), size_hint_y=None, height=btn_height)
+            # Phone: single row
+            quick_btns = BoxLayout(spacing=dp(12), size_hint_y=None, height=quick_btn_height)
 
         import_btn = OutlineButton(
             text='Import\nDeck',
@@ -625,43 +708,55 @@ class HomeScreen(BaseScreen):
 # =============================================================================
 
 class MetaDecksScreen(BaseScreen):
-    """Meta decks list with search."""
+    """Meta decks list with search - responsive for Samsung Fold 6."""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.build_ui()
 
+    def _on_screen_mode_change(self, instance, mode):
+        """Rebuild UI when screen mode changes."""
+        self.content.clear_widgets()
+        self.build_ui()
+        self.refresh_list()
+
     def build_ui(self):
-        # Header
+        font_scale = self.responsive.font_scale
+        is_cover = self.is_cover_mode
+
+        # Header - responsive height
+        header_height = dp(100) if not is_cover else dp(88)
         header = ColoredBox(
             orientation='vertical',
             bg_color=COLORS['surface'],
             size_hint_y=None,
-            height=dp(80),
-            padding=[dp(16), dp(12)]
+            height=header_height,
+            padding=[dp(16), dp(14)]
         )
 
         title = Label(
             text='[b]Meta Decks List[/b]',
             markup=True,
-            font_size=sp(18),
+            font_size=sp(20 * font_scale),
             color=get_color_from_hex(COLORS['text']),
             halign='left',
+            valign='middle',
             size_hint_y=0.4
         )
         title.bind(size=title.setter('text_size'))
         header.add_widget(title)
 
-        # Search bar
-        search_box = BoxLayout(size_hint_y=0.6, spacing=dp(8))
+        # Search bar - larger touch target
+        search_height = dp(44) if not is_cover else dp(40)
+        search_box = BoxLayout(size_hint_y=None, height=search_height, spacing=dp(8))
         self.search_input = TextInput(
-            hint_text='Search...',
+            hint_text='Search decks...',
             multiline=False,
-            font_size=sp(14),
+            font_size=sp(16 * font_scale),
             background_color=get_color_from_hex(COLORS['surface_light']),
             foreground_color=get_color_from_hex(COLORS['text']),
             hint_text_color=get_color_from_hex(COLORS['text_muted']),
-            padding=[dp(12), dp(8)]
+            padding=[dp(16), dp(10)]
         )
         search_box.add_widget(self.search_input)
         header.add_widget(search_box)
@@ -672,8 +767,8 @@ class MetaDecksScreen(BaseScreen):
         scroll = ScrollView()
         self.deck_list = GridLayout(
             cols=1,
-            spacing=dp(8),
-            padding=[dp(16), dp(12)],
+            spacing=dp(12),
+            padding=[dp(16), dp(14)],
             size_hint_y=None
         )
         self.deck_list.bind(minimum_height=self.deck_list.setter('height'))
@@ -693,43 +788,52 @@ class MetaDecksScreen(BaseScreen):
             self.deck_list.add_widget(item)
 
     def _create_deck_item(self, rank, deck, lang):
-        """Create a deck list item."""
+        """Create a deck list item - responsive sizing."""
+        font_scale = self.responsive.font_scale
+        is_cover = self.is_cover_mode
+
+        # Larger list items for better touch targets
+        item_height = self.responsive.list_item_height + dp(16)
+
         item = CardBox(
             orientation='horizontal',
             size_hint_y=None,
-            height=dp(80),
-            padding=[dp(12), dp(8)],
-            spacing=dp(12)
+            height=item_height,
+            padding=[dp(14), dp(12)],
+            spacing=dp(14)
         )
 
         # Deck info
-        info = BoxLayout(orientation='vertical', spacing=dp(4))
+        info = BoxLayout(orientation='vertical', spacing=dp(6))
 
         name_label = Label(
             text=f'[b]Deck Name {rank}[/b]',
             markup=True,
-            font_size=sp(14),
+            font_size=sp(16 * font_scale),
             color=get_color_from_hex(COLORS['text']),
             halign='left',
-            size_hint_y=0.4
+            valign='middle',
+            size_hint_y=0.35
         )
         name_label.bind(size=name_label.setter('text_size'))
 
         # Subtitle shows real deck name
         sub_label = Label(
             text=f'{deck.get_name(lang)} | Tier {deck.tier} | {deck.meta_share:.1f}% meta',
-            font_size=sp(11),
+            font_size=sp(13 * font_scale),
             color=get_color_from_hex(COLORS['text_secondary']),
             halign='left',
-            size_hint_y=0.3
+            valign='middle',
+            size_hint_y=0.35
         )
         sub_label.bind(size=sub_label.setter('text_size'))
 
         desc_label = Label(
-            text='4 color icon | text that runs 2 to 3 paragraphs and expresses...',
-            font_size=sp(10),
+            text='Competitive meta deck with balanced strategy...',
+            font_size=sp(12 * font_scale),
             color=get_color_from_hex(COLORS['text_muted']),
             halign='left',
+            valign='middle',
             size_hint_y=0.3
         )
         desc_label.bind(size=desc_label.setter('text_size'))
@@ -739,16 +843,19 @@ class MetaDecksScreen(BaseScreen):
         info.add_widget(desc_label)
         item.add_widget(info)
 
-        # View button
+        # View button - larger touch target
+        btn_width = dp(72) if not is_cover else dp(64)
+        btn_height = dp(44) if not is_cover else dp(40)
+
         view_btn = SecondaryButton(
             text='View',
             size_hint=(None, None),
-            size=(dp(60), dp(36))
+            size=(btn_width, btn_height)
         )
         view_btn.deck_id = deck.id
         view_btn.bind(on_press=self.view_deck)
 
-        btn_box = AnchorLayout(size_hint_x=None, width=dp(70))
+        btn_box = AnchorLayout(size_hint_x=None, width=btn_width + dp(12))
         btn_box.add_widget(view_btn)
         item.add_widget(btn_box)
 
@@ -765,73 +872,86 @@ class MetaDecksScreen(BaseScreen):
 # =============================================================================
 
 class DeckBuilderScreen(BaseScreen):
-    """Deck builder with filters and card grid."""
+    """Deck builder with filters and card grid - responsive for Samsung Fold 6."""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.build_ui()
 
+    def _on_screen_mode_change(self, instance, mode):
+        """Rebuild UI when screen mode changes."""
+        self.content.clear_widgets()
+        self.build_ui()
+
     def build_ui(self):
+        font_scale = self.responsive.font_scale
+        is_cover = self.is_cover_mode
+
         # Header
+        header_height = dp(64) if not is_cover else dp(56)
         header = ColoredBox(
             orientation='vertical',
             bg_color=COLORS['surface'],
             size_hint_y=None,
-            height=dp(50),
-            padding=[dp(16), dp(12)]
+            height=header_height,
+            padding=[dp(16), dp(14)]
         )
 
         title = Label(
             text='[b]Deck Builder[/b]',
             markup=True,
-            font_size=sp(18),
+            font_size=sp(20 * font_scale),
             color=get_color_from_hex(COLORS['text']),
-            halign='left'
+            halign='left',
+            valign='middle'
         )
         title.bind(size=title.setter('text_size'))
         header.add_widget(title)
         self.content.add_widget(header)
 
-        # Form section
+        # Form section - larger inputs
+        form_height = dp(180) if not is_cover else dp(160)
         form_box = ColoredBox(
             orientation='vertical',
             bg_color=COLORS['surface'],
             size_hint_y=None,
-            height=dp(140),
-            padding=[dp(16), dp(12)],
-            spacing=dp(8)
+            height=form_height,
+            padding=[dp(16), dp(14)],
+            spacing=dp(12)
         )
 
-        # Name field
-        name_row = BoxLayout(size_hint_y=None, height=dp(36), spacing=dp(8))
+        # Name field - larger
+        input_height = dp(44) if not is_cover else dp(40)
+        name_row = BoxLayout(size_hint_y=None, height=input_height, spacing=dp(12))
         name_label = Label(
             text='Name:',
-            font_size=sp(13),
+            font_size=sp(15 * font_scale),
             color=get_color_from_hex(COLORS['text']),
             size_hint_x=None,
-            width=dp(50),
-            halign='left'
+            width=dp(60),
+            halign='left',
+            valign='middle'
         )
         name_label.bind(size=name_label.setter('text_size'))
         name_input = TextInput(
-            hint_text='',
+            hint_text='Enter deck name...',
             multiline=False,
-            font_size=sp(13),
+            font_size=sp(15 * font_scale),
             background_color=get_color_from_hex(COLORS['surface_light']),
             foreground_color=get_color_from_hex(COLORS['text']),
-            padding=[dp(8), dp(6)]
+            padding=[dp(12), dp(10)]
         )
         name_row.add_widget(name_label)
         name_row.add_widget(name_input)
         form_box.add_widget(name_row)
 
-        # Type and Set dropdowns
-        filter_row = BoxLayout(size_hint_y=None, height=dp(36), spacing=dp(12))
+        # Type and Set dropdowns - larger
+        filter_row = BoxLayout(size_hint_y=None, height=input_height, spacing=dp(16))
 
         type_spinner = Spinner(
             text='Type',
             values=['All', 'Pokemon', 'Trainer', 'Energy'],
-            font_size=sp(12),
+            font_size=sp(14 * font_scale),
             background_color=get_color_from_hex(COLORS['surface_light']),
             color=get_color_from_hex(COLORS['text'])
         )
@@ -839,7 +959,7 @@ class DeckBuilderScreen(BaseScreen):
         set_spinner = Spinner(
             text='Set',
             values=['All', 'SVI', 'PAL', 'OBF', 'MEW', 'PAR', 'TEF', 'TWM'],
-            font_size=sp(12),
+            font_size=sp(14 * font_scale),
             background_color=get_color_from_hex(COLORS['surface_light']),
             color=get_color_from_hex(COLORS['text'])
         )
@@ -848,11 +968,12 @@ class DeckBuilderScreen(BaseScreen):
         filter_row.add_widget(set_spinner)
         form_box.add_widget(filter_row)
 
-        # Add card button
+        # Add card button - larger
+        btn_height = self.responsive.button_height
         add_btn = PrimaryButton(
             text='+ Add Card',
             size_hint_y=None,
-            height=dp(40)
+            height=btn_height
         )
         add_btn.bind(on_press=lambda x: self.go_to_search())
         form_box.add_widget(add_btn)
@@ -1805,70 +1926,87 @@ class BattleSequenceScreen(BaseScreen):
 # =============================================================================
 
 class SettingsScreen(BaseScreen):
-    """App settings with toggles."""
+    """App settings with toggles - responsive for Samsung Fold 6."""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.build_ui()
 
+    def _on_screen_mode_change(self, instance, mode):
+        """Rebuild UI when screen mode changes."""
+        self.content.clear_widgets()
+        self.build_ui()
+
     def build_ui(self):
+        font_scale = self.responsive.font_scale
+        is_cover = self.is_cover_mode
+
         # Header
+        header_height = dp(64) if not is_cover else dp(56)
         header = ColoredBox(
             orientation='vertical',
             bg_color=COLORS['surface'],
             size_hint_y=None,
-            height=dp(50),
-            padding=[dp(16), dp(12)]
+            height=header_height,
+            padding=[dp(16), dp(14)]
         )
 
         title = Label(
             text='[b]Settings[/b]',
             markup=True,
-            font_size=sp(18),
+            font_size=sp(20 * font_scale),
             color=get_color_from_hex(COLORS['text']),
-            halign='left'
+            halign='left',
+            valign='middle'
         )
         title.bind(size=title.setter('text_size'))
         header.add_widget(title)
         self.content.add_widget(header)
 
-        # Settings list
+        # Settings list in scrollview
+        scroll = ScrollView()
         settings_box = ColoredBox(
             orientation='vertical',
             bg_color=COLORS['surface'],
-            padding=[dp(16), dp(12)],
-            spacing=dp(8)
+            padding=[dp(16), dp(14)],
+            spacing=dp(12),
+            size_hint_y=None
         )
+        settings_box.bind(minimum_height=settings_box.setter('height'))
 
-        # Toggle settings
+        # Toggle settings - larger touch targets
         toggle_settings = [
             ('Push Notifications', 'Receive game updates'),
             ('Dark Mode', 'Enable dark theme'),
             ('Sync Data', 'Sync across devices'),
         ]
 
+        row_height = self.responsive.list_item_height
+
         for name, desc in toggle_settings:
             row = BoxLayout(
                 size_hint_y=None,
-                height=dp(60),
-                spacing=dp(8)
+                height=row_height,
+                spacing=dp(12)
             )
 
             info = BoxLayout(orientation='vertical', size_hint_x=0.7)
             name_label = Label(
                 text=name,
-                font_size=sp(14),
+                font_size=sp(16 * font_scale),
                 color=get_color_from_hex(COLORS['text']),
                 halign='left',
+                valign='middle',
                 size_hint_y=0.5
             )
             name_label.bind(size=name_label.setter('text_size'))
 
             desc_label = Label(
                 text=desc,
-                font_size=sp(11),
+                font_size=sp(13 * font_scale),
                 color=get_color_from_hex(COLORS['text_secondary']),
                 halign='left',
+                valign='middle',
                 size_hint_y=0.5
             )
             desc_label.bind(size=desc_label.setter('text_size'))
@@ -1877,7 +2015,7 @@ class SettingsScreen(BaseScreen):
             info.add_widget(desc_label)
             row.add_widget(info)
 
-            # Toggle switch
+            # Toggle switch - ensure good touch target
             switch_box = AnchorLayout(size_hint_x=0.3)
             switch = Switch(active=False)
             switch_box.add_widget(switch)
@@ -1894,13 +2032,14 @@ class SettingsScreen(BaseScreen):
             divider.bind(size=lambda w, s: setattr(w._rect, 'size', s) if hasattr(w, '_rect') else None)
             settings_box.add_widget(divider)
 
-        # Language dropdown
-        lang_row = BoxLayout(size_hint_y=None, height=dp(50), spacing=dp(8))
+        # Language dropdown - larger
+        lang_row = BoxLayout(size_hint_y=None, height=row_height, spacing=dp(12))
         lang_label = Label(
             text='Language',
-            font_size=sp(14),
+            font_size=sp(16 * font_scale),
             color=get_color_from_hex(COLORS['text']),
             halign='left',
+            valign='middle',
             size_hint_x=0.5
         )
         lang_label.bind(size=lang_label.setter('text_size'))
@@ -1908,7 +2047,7 @@ class SettingsScreen(BaseScreen):
         lang_spinner = Spinner(
             text='English',
             values=['English', 'Portuguese'],
-            font_size=sp(12),
+            font_size=sp(15 * font_scale),
             background_normal='',
             background_color=get_color_from_hex(COLORS['surface_light']),
             color=get_color_from_hex(COLORS['text']),
@@ -1920,23 +2059,31 @@ class SettingsScreen(BaseScreen):
         lang_row.add_widget(lang_spinner)
         settings_box.add_widget(lang_row)
 
-        # About button
+        # Spacer before buttons
+        settings_box.add_widget(Widget(size_hint_y=None, height=dp(20)))
+
+        # About button - larger
+        btn_height = self.responsive.button_height
         about_btn = SecondaryButton(
             text='About',
             size_hint_y=None,
-            height=dp(44)
+            height=btn_height
         )
         settings_box.add_widget(about_btn)
+
+        # Spacer
+        settings_box.add_widget(Widget(size_hint_y=None, height=dp(12)))
 
         # Privacy policy
         privacy_btn = OutlineButton(
             text='Privacy Policy',
             size_hint_y=None,
-            height=dp(44)
+            height=btn_height
         )
         settings_box.add_widget(privacy_btn)
 
-        self.content.add_widget(settings_box)
+        scroll.add_widget(settings_box)
+        self.content.add_widget(scroll)
 
     def on_language_change(self, spinner, text):
         app = App.get_running_app()
