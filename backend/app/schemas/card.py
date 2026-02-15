@@ -102,3 +102,17 @@ class CardSearchQuery(BaseModel):
     is_ex: Optional[bool] = None
     limit: int = 20
     offset: int = 0
+
+
+# Alias for backwards compatibility
+CardSearchParams = CardSearchQuery
+
+__all__ = [
+    "CardSetOut",
+    "CardAbilityOut",
+    "CardAttackOut",
+    "CardFunctionOut",
+    "CardOut",
+    "CardSearchQuery",
+    "CardSearchParams",
+]
