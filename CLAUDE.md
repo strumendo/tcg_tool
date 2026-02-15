@@ -184,15 +184,15 @@ Basic energies are ALWAYS legal regardless of set.
 
 ---
 
-## Documentation
+## Documentation (Bilingual: EN + PT-BR)
 
-| Document | Description |
-|----------|-------------|
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System architecture and design decisions |
-| [docs/API.md](docs/API.md) | Complete REST API reference |
-| [docs/DATABASE.md](docs/DATABASE.md) | Database schema (17 tables) |
-| [docs/DEPLOY.md](docs/DEPLOY.md) | Deployment and configuration guide |
-| [docs/USER_GUIDE.md](docs/USER_GUIDE.md) | User guide (Portuguese) |
+| Document | English | Portugues |
+|----------|---------|-----------|
+| Architecture | [ARCHITECTURE.md](docs/ARCHITECTURE.md) | [ARCHITECTURE_PT.md](docs/ARCHITECTURE_PT.md) |
+| API Reference | [API.md](docs/API.md) | [API_PT.md](docs/API_PT.md) |
+| Database Schema | [DATABASE.md](docs/DATABASE.md) | [DATABASE_PT.md](docs/DATABASE_PT.md) |
+| Deployment | [DEPLOY.md](docs/DEPLOY.md) | [DEPLOY_PT.md](docs/DEPLOY_PT.md) |
+| User Guide | [USER_GUIDE_EN.md](docs/USER_GUIDE_EN.md) | [USER_GUIDE.md](docs/USER_GUIDE.md) |
 
 ---
 
@@ -207,6 +207,6 @@ Basic energies are ALWAYS legal regardless of set.
 | 5. Collection | COMPLETE | Collection grid, missing cards, add modal |
 | 6. AI Chatbot | COMPLETE | Streaming SSE, chat components, deck context |
 | 7. Battles/Simulation | COMPLETE | Battle recording, AI analysis, stats dashboard |
-| 8. Mobile App | DEFERRED | Issue #50 |
+| 8. Mobile App | COMPLETE | Kivy restructured with API client, offline cache |
 | 9. Tournaments/News | COMPLETE | RK9 scraper, PokeBeach RSS, calendar/news pages |
 | 10. Documentation | COMPLETE | Architecture, API, Database, Deploy, User Guide |
