@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies import DBSession
 from app.models import Battle, CardUsageStats, Deck, DeckUsageStats, UserCollection
-from app.schemas.stats import CardUsageStatsOut, DeckUsageStatsOut, UserStatsOut
+from app.schemas.stats import BattleStatsOut, CardUsageStatsOut, DeckUsageStatsOut, UserStatsOut
 
 router = APIRouter()
 
@@ -132,4 +132,80 @@ async def get_user_stats(db: DBSession) -> UserStatsOut:
         collection_size=collection_size,
         most_played_deck=most_played_deck,
         most_faced_archetype=most_faced_archetype,
+    )
+
+
+@router.get("/battles", response_model=BattleStatsOut)
+async def get_battle_stats(db: DBSession) -> BattleStatsOut:
+    """Get detailed battle statistics for the current user."""
+    # All battles
+    stmt = select(Battle).where(Battle.user_id == _USER_ID)
+    result = await db.execute(stmt)
+    battles = result.scalars().all()
+
+    if not battles:
+        return BattleStatsOut()
+
+    total = len(battles)
+    wins = sum(1 for b in battles if b.result == "win")
+    losses = sum(1 for b in battles if b.result == "loss")
+    ties = sum(1 for b in battles if b.result == "tie")
+    win_rate = round((wins / total) * 100, 1) if total > 0 else 0.0
+
+    # Went first/second stats
+    first_battles = [b for b in battles if b.went_first is True]
+    second_battles = [b for b in battles if b.went_first is False]
+    first_wins = sum(1 for b in first_battles if b.result == "win")
+    second_wins = sum(1 for b in second_battles if b.result == "win")
+    went_first_wr = round((first_wins / len(first_battles)) * 100, 1) if first_battles else 0.0
+    went_second_wr = round((second_wins / len(second_battles)) * 100, 1) if second_battles else 0.0
+
+    # Average turns
+    turn_battles = [b for b in battles if b.total_turns is not None]
+    avg_turns = round(sum(b.total_turns for b in turn_battles) / len(turn_battles), 1) if turn_battles else 0.0
+
+    # Results by opponent
+    opponent_stats: dict[str, dict] = {}
+    for b in battles:
+        opp = b.opponent_deck_name or "Desconhecido"
+        if opp not in opponent_stats:
+            opponent_stats[opp] = {"opponent": opp, "wins": 0, "losses": 0, "ties": 0, "total": 0}
+        opponent_stats[opp]["total"] += 1
+        if b.result == "win":
+            opponent_stats[opp]["wins"] += 1
+        elif b.result == "loss":
+            opponent_stats[opp]["losses"] += 1
+        else:
+            opponent_stats[opp]["ties"] += 1
+
+    results_by_opponent = sorted(opponent_stats.values(), key=lambda x: x["total"], reverse=True)
+
+    # Results by deck
+    deck_stats: dict[int, dict] = {}
+    for b in battles:
+        if b.deck_id is None:
+            continue
+        if b.deck_id not in deck_stats:
+            deck_stats[b.deck_id] = {"deck_id": b.deck_id, "wins": 0, "losses": 0, "ties": 0, "total": 0}
+        deck_stats[b.deck_id]["total"] += 1
+        if b.result == "win":
+            deck_stats[b.deck_id]["wins"] += 1
+        elif b.result == "loss":
+            deck_stats[b.deck_id]["losses"] += 1
+        else:
+            deck_stats[b.deck_id]["ties"] += 1
+
+    results_by_deck = sorted(deck_stats.values(), key=lambda x: x["total"], reverse=True)
+
+    return BattleStatsOut(
+        total_battles=total,
+        wins=wins,
+        losses=losses,
+        ties=ties,
+        win_rate=win_rate,
+        went_first_win_rate=went_first_wr,
+        went_second_win_rate=went_second_wr,
+        avg_turns=avg_turns,
+        results_by_opponent=results_by_opponent,
+        results_by_deck=results_by_deck,
     )

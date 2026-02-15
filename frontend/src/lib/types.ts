@@ -314,9 +314,11 @@ export interface PlaySequence {
 export interface SimulationResult {
   deck_name: string;
   opponent_name: string;
+  total_turns: number;
   turns: PlaySequence[];
   win_probability: number;
   key_insights: string[];
+  analysis: string;
 }
 
 // API response wrappers
