@@ -1,3 +1,5 @@
+"""Anthropic Claude API integration for AI-powered TCG analysis."""
+
 import anthropic
 
 from app.config import settings
@@ -7,17 +9,48 @@ class ClaudeClient:
     """Anthropic Claude API integration for AI-powered TCG analysis."""
 
     def __init__(self) -> None:
-        self.client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+        self.client = anthropic.AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
 
-    async def chat(self, message: str, system_context: str = "") -> str:
-        """Send a chat message with optional system context."""
-        response = self.client.messages.create(
+    async def chat(
+        self,
+        message: str,
+        system_context: str = "",
+        history: list[dict] | None = None,
+    ) -> str:
+        """Send a chat message with optional system context and history."""
+        messages = []
+        if history:
+            messages.extend(history)
+        messages.append({"role": "user", "content": message})
+
+        response = await self.client.messages.create(
             model="claude-sonnet-4-20250514",
             max_tokens=2048,
             system=system_context or self._default_system_prompt(),
-            messages=[{"role": "user", "content": message}],
+            messages=messages,
         )
         return response.content[0].text
+
+    async def chat_stream(
+        self,
+        message: str,
+        system_context: str = "",
+        history: list[dict] | None = None,
+    ):
+        """Stream a chat response. Yields text chunks."""
+        messages = []
+        if history:
+            messages.extend(history)
+        messages.append({"role": "user", "content": message})
+
+        async with self.client.messages.stream(
+            model="claude-sonnet-4-20250514",
+            max_tokens=2048,
+            system=system_context or self._default_system_prompt(),
+            messages=messages,
+        ) as stream:
+            async for text in stream.text_stream:
+                yield text
 
     async def suggest_swaps(self, deck_info: dict, meta_context: dict) -> str:
         """AI-powered card swap suggestions."""

@@ -17,6 +17,7 @@ class ChatRequest(BaseModel):
 
     message: str
     system_context: Optional[str] = None
+    deck_id: Optional[int] = None
     history: list[ChatMessage] = []
 
 
