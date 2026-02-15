@@ -1,0 +1,36 @@
+{
+  "nav": {
+    "decks": "Decks",
+    "meta": "Meta",
+    "cards": "Cards",
+    "battles": "Battles",
+    "stats": "Stats",
+    "chat": "AI Chat",
+    "collection": "Collection"
+  },
+  "home": {
+    "title": "TCG Tool",
+    "subtitle": "Pokemon TCG deck analysis platform with AI-powered insights"
+  },
+  "decks": {
+    "title": "My Decks",
+    "import": "Import Deck",
+    "new": "New Deck",
+    "empty": "You don't have any saved decks",
+    "view": "View",
+    "analyze": "Analyze",
+    "export": "Export",
+    "delete": "Delete"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "pokemon": "Pokemon",
+    "trainer": "Trainer",
+    "energy": "Energy",
+    "total": "Total"
+  }
+}

@@ -1,0 +1,32 @@
+Pokémon: 11
+3 Teal Mask Ogerpon ex TWM 25
+2 Meganium MEG 10
+1 Fezandipiti ex SFA 38
+1 Mew ex MEW 151
+1 Regigigas PRE 86
+2 Bayleef MEG 9
+2 Chikorita MEG 8
+3 Bulbasaur MEG 1
+2 Mega Venusaur ex MEG 3
+2 Ivysaur MEG 2
+1 Mega Meganium ex ASC 10
+
+Treinador: 13
+3 Forest of Vitality MEG 117
+4 Bug Catching Set TWM 143
+3 Dawn PFL 87
+1 Max Rod PRE 116
+1 Energy Recycler DRI 164
+2 Night Stretcher SFA 61
+1 Nighttime Mine ASC 197
+4 Hilda WHT 84
+4 Lillie's Determination MEG 119
+2 Ultra Ball MEG 131
+1 Wally's Compassion MEG 132
+1 Air Balloon ASC 181
+2 Boss's Orders MEG 114
+
+Energia: 1
+11 Basic {G} Energy MEE 1
+
+Total de cartas: 60
