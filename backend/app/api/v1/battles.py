@@ -9,6 +9,7 @@ from sqlalchemy.orm import selectinload
 
 from app.dependencies import DBSession
 from app.models import Battle, BattleAction
+from app.integrations import ClaudeClient
 from app.schemas.battle import BattleCreate, BattleOut, BattleUpdate
 
 router = APIRouter()
@@ -121,3 +122,57 @@ async def delete_battle(db: DBSession, battle_id: int) -> None:
     battle = await _get_battle(db, battle_id)
     await db.delete(battle)
     await db.commit()
+
+
+@router.post("/{battle_id}/analyze")
+async def analyze_battle(db: DBSession, battle_id: int) -> dict:
+    """Get AI-powered analysis of a battle."""
+    battle = await _get_battle(db, battle_id)
+
+    battle_data = {
+        "result": battle.result,
+        "total_turns": battle.total_turns,
+        "went_first": battle.went_first,
+        "opponent": battle.opponent_deck_name,
+        "notes": battle.notes,
+        "actions": [
+            {
+                "turn": a.turn,
+                "player": a.player,
+                "action_type": a.action_type,
+                "card_name": a.card_name,
+                "details": a.details,
+            }
+            for a in sorted(battle.actions, key=lambda x: (x.turn, x.sequence_order))
+        ],
+    }
+
+    # Add deck info if available
+    if battle.deck_id:
+        from app.services import deck_service
+        try:
+            deck = await deck_service.get_deck(db, battle.deck_id)
+            battle_data["deck"] = {
+                "name": deck.name,
+                "archetype": deck.archetype,
+                "cards": [
+                    {
+                        "name": dc.card.name_en or dc.card.name_pt or "Unknown",
+                        "type": dc.card.card_type,
+                        "quantity": dc.quantity,
+                    }
+                    for dc in deck.deck_cards
+                ],
+            }
+        except Exception:
+            pass
+
+    try:
+        client = ClaudeClient()
+        analysis = await client.analyze_battle(battle_data)
+        return {"battle_id": battle_id, "analysis": analysis}
+    except Exception as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=f"AI service error: {str(exc)}",
+        )

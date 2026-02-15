@@ -46,3 +46,18 @@ class UserStatsOut(BaseModel):
     collection_size: int = 0
     most_played_deck: Optional[str] = None
     most_faced_archetype: Optional[str] = None
+
+
+class BattleStatsOut(BaseModel):
+    """Detailed battle statistics."""
+
+    total_battles: int = 0
+    wins: int = 0
+    losses: int = 0
+    ties: int = 0
+    win_rate: float = 0.0
+    went_first_win_rate: float = 0.0
+    went_second_win_rate: float = 0.0
+    avg_turns: float = 0.0
+    results_by_opponent: list[dict] = []
+    results_by_deck: list[dict] = []
