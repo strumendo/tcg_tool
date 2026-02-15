@@ -11,6 +11,7 @@ const navLinks = [
   { href: "/stats", label: "Stats" },
   { href: "/chat", label: "Chat IA" },
   { href: "/collection", label: "Colecao" },
+  { href: "/tournaments", label: "Torneios" },
 ];
 
 export function Navbar() {
