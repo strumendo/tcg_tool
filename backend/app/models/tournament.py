@@ -1,5 +1,7 @@
 """Tournament and statistics ORM models: tournaments, news_articles, card_usage_stats, deck_usage_stats."""
 
+from __future__ import annotations
+
 from datetime import date, datetime
 from typing import Optional
 

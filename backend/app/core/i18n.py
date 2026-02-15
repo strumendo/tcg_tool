@@ -88,3 +88,9 @@ def get_localized(en: str, pt: str, lang: Language = Language.EN) -> str:
     if lang == Language.PT:
         return pt
     return en
+
+
+# Alias for convenience
+translate = get_translation
+
+__all__ = ["Language", "TRANSLATIONS", "get_translation", "get_localized", "translate"]
