@@ -1,5 +1,6 @@
 """Service layer for business logic and database operations."""
 
+from app.services import chat_service
 from app.services.card_service import (
     get_ability_categories,
     get_card,
@@ -25,6 +26,8 @@ from app.services.meta_service import (
 )
 
 __all__ = [
+    # chat_service
+    "chat_service",
     # card_service
     "search_cards",
     "get_card",
