@@ -1,0 +1,35 @@
+Pokémon: 22
+4 Torchic DRI 40
+3 Combusken DRI 41
+3 Blaziken ex JTG 24
+1 Blaziken DRI 42
+2 Pidgey MEW 16
+1 Pidgeotto OBF 163
+2 Pidgeot ex OBF 164
+2 Munkidori TWM 95
+1 Fezandipiti ex SFA 38
+1 Mega Absol ex MEG 86
+1 Reshiram ex WHT 20
+1 Psyduck MEP 7
+
+Trainer: 31
+4 Determinação da Lílian MEG 119
+3 Kissera PAL 185
+2 Ordem da Chefia MEG 114
+1 Hipótese do Professor Turo PRE 121
+4 Ultra Bola MEG 131
+3 Doce Raro MEG 125
+3 Poffin de Colega PRE 101
+2 Pegador de Contra-ataque PAR 160
+1 Supervara PAL 188
+1 Maca Noturna SFA 61
+1 Caixa Secreta TWM 163
+2 Máquina Técnica: Evolução PAR 178
+1 Faixa de Vitalidade SVI 197
+1 Balão de Ar BLK 79
+1 Loja da Cidade OBF 196
+1 Artazon PAF 76
+
+Energy: 7
+4 Energia Fogo MEE 2
+3 Energia Escuridão MEE 7

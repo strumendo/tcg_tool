@@ -1,0 +1,35 @@
+Pokémon: 12
+4 Dreepy PRE 71
+1 Dusknoir PRE 37
+4 Drakloak PRE 72
+1 Hawlucha SVI 118
+1 Munkidori TWM 95
+1 Latias ex SSP 76
+2 Duskull PRE 35
+2 Dusclops PRE 36
+1 Fezandipiti ex SFA 38
+2 Budew PRE 4
+3 Dragapult ex PRE 73
+1 Bloodmoon Ursaluna ex TWM 141
+
+Treinador: 12
+4 Buddy-Buddy Poffin PRE 101
+3 Lillie's Determination MEG 119
+3 Counter Catcher PAR 160
+1 Jamming Tower TWM 153
+2 Boss's Orders MEG 114
+1 Artazon PAF 76
+2 Night Stretcher SFA 61
+4 Ultra Ball MEG 131
+3 Iono PAF 80
+2 Dawn PFL 87
+2 Hilda WHT 84
+3 Rare Candy MEG 125
+
+Energia: 4
+2 Basic {P} Energy MEE 5
+2 Basic {R} Energy MEE 2
+2 Luminous Energy PAL 191
+1 Neo Upper Energy TEF 162
+
+Total de cartas: 60
